@@ -1,0 +1,26 @@
+{
+  "accuracy":0.7007361807,
+  "macro_f1":0.6990436609,
+  "mae_knots":7.6813737802,
+  "rmse_knots":12.2714284881,
+  "r2_score":0.7316809657,
+  "mean_uncertainty_knots":16.59572632,
+  "features":[
+    "central_pressure",
+    "translation_speed",
+    "distance_to_land",
+    "latitude",
+    "longitude",
+    "sst",
+    "vertical_wind_shear",
+    "pressure_deficit",
+    "empirical_potential_wind",
+    "coriolis_f",
+    "distance_from_equator",
+    "ocean_heat_index",
+    "thermodynamic_mpi",
+    "shear_sst_ratio",
+    "land_friction_decay"
+  ],
+  "dataset_rows":157570
+}

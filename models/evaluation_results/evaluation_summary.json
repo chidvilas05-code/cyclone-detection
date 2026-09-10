@@ -1,0 +1,111 @@
+{
+    "vision_model": {
+        "accuracy": 92.64356905552918,
+        "macro_f1": 0.9203536660610425,
+        "weighted_f1": 0.9264466944701492,
+        "wind_mae_knots": 4.778095976798298,
+        "wind_rmse_knots": 6.764721002419286,
+        "wind_r2": 0.9486865290620474,
+        "use_tta": true,
+        "classification_report": {
+            "Depression": {
+                "precision": 0.9572763684913218,
+                "recall": 0.9611260053619303,
+                "f1-score": 0.9591973244147157,
+                "support": 746.0
+            },
+            "Cyclonic Storm": {
+                "precision": 0.9032258064516129,
+                "recall": 0.8879492600422833,
+                "f1-score": 0.8955223880597015,
+                "support": 473.0
+            },
+            "Severe Cyclonic Storm": {
+                "precision": 0.8689024390243902,
+                "recall": 0.8850931677018633,
+                "f1-score": 0.8769230769230769,
+                "support": 322.0
+            },
+            "Very Severe Cyclonic Storm": {
+                "precision": 0.9045801526717557,
+                "recall": 0.9080459770114943,
+                "f1-score": 0.9063097514340345,
+                "support": 261.0
+            },
+            "Extremely Severe / Super Cyclone": {
+                "precision": 0.966996699669967,
+                "recall": 0.9606557377049181,
+                "f1-score": 0.9638157894736842,
+                "support": 305.0
+            },
+            "accuracy": 0.9264356905552918,
+            "macro avg": {
+                "precision": 0.9201962932618095,
+                "recall": 0.920574029564498,
+                "f1-score": 0.9203536660610425,
+                "support": 2107.0
+            },
+            "weighted avg": {
+                "precision": 0.9265163625812343,
+                "recall": 0.9264356905552918,
+                "f1-score": 0.9264466944701492,
+                "support": 2107.0
+            }
+        }
+    },
+    "sensory_model": {
+        "accuracy": 70.07361807450657,
+        "macro_f1": 0.699043660933304,
+        "weighted_f1": 0.7009719466397475,
+        "wind_mae_knots": 7.681373780176807,
+        "wind_rmse_knots": 12.271428488132228,
+        "wind_r2": 0.73168096565473,
+        "uncertainty_coverage_pct": 90.93418797994542,
+        "mean_uncertainty_interval_knots": 33.19145263993497,
+        "classification_report": {
+            "Depression": {
+                "precision": 0.7826038159371492,
+                "recall": 0.7958228714905273,
+                "f1-score": 0.7891579900407424,
+                "support": 8762.0
+            },
+            "Cyclonic Storm": {
+                "precision": 0.6107246376811594,
+                "recall": 0.7238891433806688,
+                "f1-score": 0.6625091709464417,
+                "support": 8732.0
+            },
+            "Severe Cyclonic Storm": {
+                "precision": 0.7140350877192982,
+                "recall": 0.5793594306049822,
+                "f1-score": 0.6396856581532416,
+                "support": 5620.0
+            },
+            "Very Severe Cyclonic Storm": {
+                "precision": 0.6623856439127375,
+                "recall": 0.6705253784505788,
+                "f1-score": 0.6664306575803168,
+                "support": 5615.0
+            },
+            "Extremely Severe / Super Cyclone": {
+                "precision": 0.8796019900497513,
+                "recall": 0.6348294434470377,
+                "f1-score": 0.7374348279457769,
+                "support": 2785.0
+            },
+            "accuracy": 0.7007361807450657,
+            "macro avg": {
+                "precision": 0.7298702350600191,
+                "recall": 0.6808852534747589,
+                "f1-score": 0.699043660933304,
+                "support": 31514.0
+            },
+            "weighted avg": {
+                "precision": 0.7099031001242058,
+                "recall": 0.7007361807450657,
+                "f1-score": 0.7009719466397475,
+                "support": 31514.0
+            }
+        }
+    }
+}

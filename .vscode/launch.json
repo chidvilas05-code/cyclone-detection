@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Train Vision Model (Satellite Transfer Learning)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.training.train_vision",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Train Sensory Model (Atmospheric Booster)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.training.train_sensory",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Run Streamlit Dashboard",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "app/app.py"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Evaluate All Models",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.evaluation.evaluate_all",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
+}

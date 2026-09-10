@@ -1,0 +1,27 @@
+# Python Bytecode & Environments
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+venv/
+env/
+ENV/
+
+# Large Raw Datasets (> 100 MB - Exceeds GitHub Limit)
+data/images/*.h5
+data/sensory/ibtracs*.csv
+
+# Large Model Checkpoints (> 600 MB - Exceeds GitHub Limit)
+models/vision_model/*.pt
+
+# Temporary & Cache Artifacts
+*.tmp
+temp/
+scratch/
+debug_frame_*.png
+test_*.png
+verified_frame_*.png
+
+# OS Specific
+.DS_Store
+Thumbs.db
