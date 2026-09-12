@@ -37,11 +37,17 @@ from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCyclone
 from src.evaluation.evaluate_sequence import run_sequence_evaluation
 
 
+from tqdm import tqdm
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train Spatiotemporal Cyclone Sequence Model")
     parser.add_argument("--data_dir", type=str, default="data/sequences", help="Path to sequence dataset")
     parser.add_argument("--track_csv", type=str, default=None, help="Path to track metadata CSV")
     parser.add_argument("--seq_length", type=int, default=4, help="Sequence length (consecutive frames)")
+    parser.add_argument("--stride", type=int, default=1, help="Stride between sequence windows")
+    parser.add_argument("--max_samples", type=int, default=None, help="Optional max sample limit for fast experimentation")
+    parser.add_argument("--num_workers", type=int, default=2, help="DataLoader workers (default 2 for Windows)")
     parser.add_argument("--spatial_backbone", type=str, default="convnext_tiny", help="Spatial backbone name")
     parser.add_argument("--temporal_engine", type=str, default="transformer", choices=["transformer", "gru"])
     parser.add_argument("--hidden_dim", type=int, default=256, help="Temporal hidden feature dimension")
@@ -56,18 +62,19 @@ def parse_args():
     return parser.parse_args()
 
 
-def train_epoch(model, dataloader, optimizer, scaler, criterion_cat, criterion_wind, criterion_trend, device):
+def train_epoch(epoch, epochs, model, dataloader, optimizer, scaler, criterion_cat, criterion_wind, criterion_trend, device):
     model.train()
     total_loss = 0.0
     correct_cat = 0
     total_samples = 0
     mae_wind = 0.0
 
-    for batch in dataloader:
-        seq = batch["sequence"].to(device)
-        cat = batch["category"].to(device)
-        wind = batch["wind_speed"].to(device)
-        trend = batch["trend"].to(device)
+    pbar = tqdm(dataloader, desc=f"Epoch [{epoch:02d}/{epochs:02d}] [Train]", dynamic_ncols=True, leave=False)
+    for batch in pbar:
+        seq = batch["sequence"].to(device, non_blocking=True)
+        cat = batch["category"].to(device, non_blocking=True)
+        wind = batch["wind_speed"].to(device, non_blocking=True)
+        trend = batch["trend"].to(device, non_blocking=True)
 
         optimizer.zero_grad()
 
@@ -89,11 +96,18 @@ def train_epoch(model, dataloader, optimizer, scaler, criterion_cat, criterion_w
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
             optimizer.step()
 
-        total_loss += loss.item() * seq.size(0)
+        b_size = seq.size(0)
+        total_loss += loss.item() * b_size
         preds = torch.argmax(logits, dim=1)
         correct_cat += (preds == cat).sum().item()
         mae_wind += torch.abs(pred_wind - wind).sum().item()
-        total_samples += seq.size(0)
+        total_samples += b_size
+
+        pbar.set_postfix({
+            "loss": f"{loss.item():.3f}",
+            "acc": f"{(correct_cat / max(1, total_samples)) * 100:.1f}%",
+            "mae": f"{(mae_wind / max(1, total_samples)):.1f}kt"
+        })
 
     avg_loss = total_loss / max(1, total_samples)
     acc = correct_cat / max(1, total_samples)
@@ -101,19 +115,20 @@ def train_epoch(model, dataloader, optimizer, scaler, criterion_cat, criterion_w
     return avg_loss, acc, avg_mae
 
 
-def evaluate(model, dataloader, criterion_cat, criterion_wind, criterion_trend, device):
+def evaluate(epoch, epochs, model, dataloader, criterion_cat, criterion_wind, criterion_trend, device):
     model.eval()
     total_loss = 0.0
     correct_cat = 0
     total_samples = 0
     mae_wind = 0.0
 
+    pbar = tqdm(dataloader, desc=f"Epoch [{epoch:02d}/{epochs:02d}] [Val  ]", dynamic_ncols=True, leave=False)
     with torch.no_grad():
-        for batch in dataloader:
-            seq = batch["sequence"].to(device)
-            cat = batch["category"].to(device)
-            wind = batch["wind_speed"].to(device)
-            trend = batch["trend"].to(device)
+        for batch in pbar:
+            seq = batch["sequence"].to(device, non_blocking=True)
+            cat = batch["category"].to(device, non_blocking=True)
+            wind = batch["wind_speed"].to(device, non_blocking=True)
+            trend = batch["trend"].to(device, non_blocking=True)
 
             logits, pred_wind, pred_trend = model(seq)
             loss_c = criterion_cat(logits, cat)
@@ -121,11 +136,18 @@ def evaluate(model, dataloader, criterion_cat, criterion_wind, criterion_trend, 
             loss_t = criterion_trend(pred_trend, trend)
             loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
 
-            total_loss += loss.item() * seq.size(0)
+            b_size = seq.size(0)
+            total_loss += loss.item() * b_size
             preds = torch.argmax(logits, dim=1)
             correct_cat += (preds == cat).sum().item()
             mae_wind += torch.abs(pred_wind - wind).sum().item()
-            total_samples += seq.size(0)
+            total_samples += b_size
+
+            pbar.set_postfix({
+                "loss": f"{loss.item():.3f}",
+                "acc": f"{(correct_cat / max(1, total_samples)) * 100:.1f}%",
+                "mae": f"{(mae_wind / max(1, total_samples)):.1f}kt"
+            })
 
     avg_loss = total_loss / max(1, total_samples)
     acc = correct_cat / max(1, total_samples)
@@ -165,13 +187,30 @@ def main():
             print(f"\n[ERROR] Dataset in '{args.data_dir}' only contains {len(full_ds)} sequence. At least 2 sequences are required for train/val splitting.\n")
             sys.exit(1)
 
+        if args.max_samples and len(full_ds) > args.max_samples:
+            from torch.utils.data import Subset
+            full_ds = Subset(full_ds, list(range(args.max_samples)))
+            print(f"[Sampling] Limited dataset to first {args.max_samples} sequences for fast training.")
+
         val_size = max(1, int(len(full_ds) * 0.15))
         train_size = len(full_ds) - val_size
         train_ds, val_ds = random_split(full_ds, [train_size, val_size])
         epochs = args.epochs
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        pin_memory=("cuda" in device.type)
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=("cuda" in device.type)
+    )
 
     print(f"Dataset Loaded: {len(train_ds)} train sequences | {len(val_ds)} val sequences")
 
@@ -204,11 +243,11 @@ def main():
     for epoch in range(1, epochs + 1):
         t0 = time.time()
         tr_loss, tr_acc, tr_mae = train_epoch(
-            model, train_loader, optimizer, scaler,
+            epoch, epochs, model, train_loader, optimizer, scaler,
             criterion_cat, criterion_wind, criterion_trend, device
         )
         val_loss, val_acc, val_mae = evaluate(
-            model, val_loader,
+            epoch, epochs, model, val_loader,
             criterion_cat, criterion_wind, criterion_trend, device
         )
         scheduler.step()
