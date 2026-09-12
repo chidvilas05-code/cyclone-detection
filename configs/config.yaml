@@ -106,3 +106,22 @@ sensory_model:
 fusion:
   vision_weight: 0.60          # Weight given to satellite image pattern
   sensory_weight: 0.40         # Weight given to physical atmospheric sensor readings
+
+# Model 3: Equal-Interval Spatiotemporal Cyclone Sequence Model
+sequence_model:
+  sequence_length: 4           # Number of consecutive equal-interval frames [t-3, t-2, t-1, t]
+  interval_minutes: 60         # 60 minutes (1 hour) matching Digital Typhoon WP
+  spatial_backbone: "convnext_tiny"  # Options: convnext_tiny, resnet50, swin_tiny_patch4_window7_224
+  temporal_engine: "transformer"     # Options: transformer, gru
+  hidden_dim: 256
+  num_transformer_layers: 2
+  num_heads: 4
+  dropout: 0.20
+  img_size: 224
+  batch_size: 16
+  epochs: 20
+  learning_rate: 0.00015
+  weight_decay: 0.0001
+  amp_fp16: true
+  save_dir: "models/sequence_model"
+

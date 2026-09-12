@@ -100,6 +100,46 @@ def generate_demo_cyclone_video(
     return str(out_file)
 
 
+class SequenceFrameBuffer:
+    """
+    Maintains a rolling temporal FIFO buffer of K consecutive equal-interval frames
+    for spatiotemporal sequence inference on live video or satellite streams.
+    """
+    def __init__(self, seq_length: int = 4, img_size: int = 224):
+        self.seq_length = seq_length
+        self.img_size = img_size
+        self.buffer: List[Image.Image] = []
+        from torchvision import transforms
+        self.transform = transforms.Compose([
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    def push(self, pil_frame: Image.Image):
+        """Pushes a new frame into the rolling FIFO buffer."""
+        self.buffer.append(pil_frame.convert("RGB"))
+        if len(self.buffer) > self.seq_length:
+            self.buffer.pop(0)
+
+    def is_ready(self) -> bool:
+        """Returns True once K consecutive frames have been ingested."""
+        return len(self.buffer) >= self.seq_length
+
+    def get_sequence_tensor(self, device: torch.device) -> torch.Tensor:
+        """
+        Builds a (1, K, 3, H, W) tensor. If buffer is filling, pads with the first frame.
+        """
+        frames_to_use = list(self.buffer)
+        while len(frames_to_use) < self.seq_length:
+            frames_to_use.insert(0, frames_to_use[0] if frames_to_use else Image.new("RGB", (self.img_size, self.img_size)))
+        frames_to_use = frames_to_use[-self.seq_length:]
+
+        tensors = [self.transform(f) for f in frames_to_use]
+        # Shape: (1, K, 3, H, W)
+        return torch.stack(tensors, dim=0).unsqueeze(0).to(device)
+
+
 def locate_cyclone_eye(
     frame_bgr: np.ndarray,
     prev_eye_center: Optional[Tuple[int, int]] = None,
