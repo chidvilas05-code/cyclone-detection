@@ -41,6 +41,7 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
     """
     def __init__(
         self,
+        spatial_backbone: Optional[str] = None,
         eye_backbone_name: str = "convnext_tiny",
         synoptic_backbone_name: str = "convnext_tiny",
         pretrained: bool = True,
@@ -54,6 +55,10 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         eye_crop_ratio: float = 0.50
     ):
         super().__init__()
+        if spatial_backbone is not None:
+            eye_backbone_name = spatial_backbone
+            synoptic_backbone_name = spatial_backbone
+
         self.eye_crop_ratio = eye_crop_ratio
         self.hidden_dim = hidden_dim
         self.seq_length = seq_length
