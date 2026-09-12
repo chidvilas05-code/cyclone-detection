@@ -125,36 +125,107 @@ class CycloneSequenceDataset(Dataset):
         """
         Indexes storm sequence paths from Digital Typhoon WP directory structure:
         data_dir/
-          ├── {storm_id}/
-          │     ├── 20210414_0000.png
-          │     ├── 20210414_0100.png
+          ├── image_png/image_png/{storm_id}/ (or directly {storm_id}/)
+          └── metadata/metadata/{storm_id}.csv
         """
-        df_track = None
-        if track_csv and os.path.exists(track_csv):
-            try:
-                df_track = pd.read_csv(track_csv)
-            except Exception as e:
-                print(f"[Sequence Dataset] Note on track CSV: {e}")
+        # 1. Resolve image root directory
+        possible_img_roots = [
+            data_path / "image_png" / "image_png",
+            data_path / "image_png",
+            data_path / "images",
+            data_path
+        ]
+        img_root = None
+        for pr in possible_img_roots:
+            if pr.exists() and any(d.is_dir() and (any(d.glob("*.png")) or any(d.glob("*.jpg"))) for d in pr.iterdir() if d.is_dir()):
+                img_root = pr
+                break
+        if img_root is None:
+            img_root = data_path
 
-        storm_dirs = [d for d in data_path.iterdir() if d.is_dir()]
-        for s_dir in storm_dirs:
+        # 2. Resolve metadata root directory
+        possible_meta_roots = [
+            data_path / "metadata" / "metadata",
+            data_path / "metadata",
+            data_path
+        ]
+        meta_root = None
+        for pm in possible_meta_roots:
+            if pm.exists() and any(f.suffix == ".csv" for f in pm.iterdir() if f.is_file()):
+                meta_root = pm
+                break
+
+        storm_dirs = [d for d in img_root.iterdir() if d.is_dir()]
+        total_indexed_sequences = 0
+
+        for s_dir in sorted(storm_dirs):
             img_files = sorted(list(s_dir.glob("*.png")) + list(s_dir.glob("*.jpg")))
             if len(img_files) < self.seq_length:
                 continue
 
+            # Check for matching metadata CSV
+            meta_map = {}
+            if meta_root:
+                m_csv = meta_root / f"{s_dir.name}.csv"
+                if m_csv.exists():
+                    try:
+                        df = pd.read_csv(m_csv)
+                        for _, row in df.iterrows():
+                            # Map filename to wind
+                            f_name = str(row.get("file_1", "")).replace(".h5", ".png")
+                            w_val = float(row.get("wind", 0.0))
+                            p_val = float(row.get("pressure", 1010.0))
+                            # Atkinson-Holliday pressure-wind relationship if wind is 0
+                            if w_val <= 0.0 and p_val < 1010.0:
+                                w_val = max(15.0, 6.7 * ((1010.0 - p_val) ** 0.644))
+                            elif w_val <= 0.0:
+                                w_val = 25.0
+                            meta_map[f_name] = w_val
+                    except Exception:
+                        pass
+
             for start_idx in range(0, len(img_files) - self.seq_length + 1, self.stride):
                 window_files = img_files[start_idx : start_idx + self.seq_length]
-                curr_wind = 55.0
-                curr_cat = 2
-                trend = 1
+                
+                # Determine wind speeds across the window
+                winds = []
+                for p in window_files:
+                    w = meta_map.get(p.name, None)
+                    if w is None:
+                        w = 45.0  # Default nominal tropical storm wind
+                    winds.append(w)
+
+                curr_wind = float(winds[-1])
+                
+                # Category assignment (WMO 5 tiers)
+                if curr_wind < 34.0:
+                    curr_cat = 0
+                elif curr_wind < 48.0:
+                    curr_cat = 1
+                elif curr_wind < 64.0:
+                    curr_cat = 2
+                elif curr_wind < 90.0:
+                    curr_cat = 3
+                else:
+                    curr_cat = 4
+
+                # Intensity trend calculation
+                delta_w = curr_wind - winds[0]
+                if delta_w < -5.0:
+                    trend = 0  # Weakening
+                elif delta_w > 5.0:
+                    trend = 2  # Intensifying
+                else:
+                    trend = 1  # Steady
 
                 self.samples.append({
                     "type": "files",
                     "paths": [str(p) for p in window_files],
                     "category": curr_cat,
-                    "target_wind": float(curr_wind),
+                    "target_wind": curr_wind,
                     "target_trend": trend
                 })
+                total_indexed_sequences += 1
 
     def __len__(self) -> int:
         return len(self.samples)
