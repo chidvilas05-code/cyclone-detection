@@ -155,6 +155,16 @@ def main():
             seq_length=args.seq_length,
             is_train=True
         )
+        if len(full_ds) == 0:
+            print(f"\n[ERROR] No valid cyclone sequence frames found in '{args.data_dir}'!")
+            print(f"  -> Please place your sequence dataset folders in '{args.data_dir}' or specify --data_dir <path>.")
+            print("  -> To verify the training pipeline with synthetic sequences on CUDA, run with the '--dry_run' flag:")
+            print("     python src/training/train_sequence.py --dry_run --device cuda\n")
+            sys.exit(1)
+        elif len(full_ds) < 2:
+            print(f"\n[ERROR] Dataset in '{args.data_dir}' only contains {len(full_ds)} sequence. At least 2 sequences are required for train/val splitting.\n")
+            sys.exit(1)
+
         val_size = max(1, int(len(full_ds) * 0.15))
         train_size = len(full_ds) - val_size
         train_ds, val_ds = random_split(full_ds, [train_size, val_size])
