@@ -17,6 +17,10 @@ Usage:
 
 import os
 import sys
+
+# Prevent CUDA memory fragmentation
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 from pathlib import Path
 import argparse
 import time
@@ -36,7 +40,6 @@ from src.data_prep.dataset_sequence import CycloneSequenceDataset
 from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCycloneModel, SpatiotemporalCycloneModel
 from src.evaluation.evaluate_sequence import run_sequence_evaluation
 
-
 from tqdm import tqdm
 
 
@@ -51,7 +54,8 @@ def parse_args():
     parser.add_argument("--spatial_backbone", type=str, default="convnext_tiny", help="Spatial backbone name")
     parser.add_argument("--temporal_engine", type=str, default="transformer", choices=["transformer", "gru"])
     parser.add_argument("--hidden_dim", type=int, default=256, help="Temporal hidden feature dimension")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size (default 32 for optimal GPU utilization)")
+    parser.add_argument("--batch_size", type=int, default=8, help="Batch size (default 8 = 32 frames per batch, safe for 8GB GPU)")
+    parser.add_argument("--grad_accum_steps", type=int, default=2, help="Gradient accumulation steps (effective batch size = batch_size * grad_accum_steps)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
     parser.add_argument("--lr", type=float, default=1.5e-4, help="Initial learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
@@ -62,49 +66,54 @@ def parse_args():
     return parser.parse_args()
 
 
-def train_epoch(epoch, epochs, model, dataloader, optimizer, scaler, criterion_cat, criterion_wind, criterion_trend, device):
+def train_epoch(epoch, epochs, model, dataloader, optimizer, scaler, criterion_cat, criterion_wind, criterion_trend, device, grad_accum_steps=2):
     model.train()
     total_loss = 0.0
     correct_cat = 0
     total_samples = 0
     mae_wind = 0.0
 
+    optimizer.zero_grad(set_to_none=True)
     pbar = tqdm(dataloader, desc=f"Epoch [{epoch:02d}/{epochs:02d}] [Train]", dynamic_ncols=True, leave=False)
-    for batch in pbar:
+
+    for batch_idx, batch in enumerate(pbar):
         seq = batch["sequence"].to(device, non_blocking=True)
         cat = batch["category"].to(device, non_blocking=True)
         wind = batch["wind_speed"].to(device, non_blocking=True)
         trend = batch["trend"].to(device, non_blocking=True)
-
-        optimizer.zero_grad()
 
         with torch.amp.autocast(device_type="cuda" if "cuda" in device.type else "cpu"):
             logits, pred_wind, pred_trend = model(seq)
             loss_c = criterion_cat(logits, cat)
             loss_w = criterion_wind(pred_wind, wind)
             loss_t = criterion_trend(pred_trend, trend)
-            loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
+            raw_loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
+            loss = raw_loss / grad_accum_steps
 
         if scaler is not None and "cuda" in device.type:
             scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
-            scaler.step(optimizer)
-            scaler.update()
+            if (batch_idx + 1) % grad_accum_steps == 0 or (batch_idx + 1) == len(dataloader):
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
         else:
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
-            optimizer.step()
+            if (batch_idx + 1) % grad_accum_steps == 0 or (batch_idx + 1) == len(dataloader):
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
 
         b_size = seq.size(0)
-        total_loss += loss.item() * b_size
+        total_loss += raw_loss.item() * b_size
         preds = torch.argmax(logits, dim=1)
         correct_cat += (preds == cat).sum().item()
         mae_wind += torch.abs(pred_wind - wind).sum().item()
         total_samples += b_size
 
         pbar.set_postfix({
-            "loss": f"{loss.item():.3f}",
+            "loss": f"{raw_loss.item():.3f}",
             "acc": f"{(correct_cat / max(1, total_samples)) * 100:.1f}%",
             "mae": f"{(mae_wind / max(1, total_samples)):.1f}kt"
         })
@@ -245,10 +254,13 @@ def main():
 
     print("\nStarting Training Execution...")
     for epoch in range(1, epochs + 1):
+        if "cuda" in device.type:
+            torch.cuda.empty_cache()
         t0 = time.time()
         tr_loss, tr_acc, tr_mae = train_epoch(
             epoch, epochs, model, train_loader, optimizer, scaler,
-            criterion_cat, criterion_wind, criterion_trend, device
+            criterion_cat, criterion_wind, criterion_trend, device,
+            grad_accum_steps=args.grad_accum_steps
         )
         val_loss, val_acc, val_mae = evaluate(
             epoch, epochs, model, val_loader,
