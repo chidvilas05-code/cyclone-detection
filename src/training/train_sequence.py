@@ -45,14 +45,14 @@ def parse_args():
     parser.add_argument("--data_dir", type=str, default="data/sequences", help="Path to sequence dataset")
     parser.add_argument("--track_csv", type=str, default=None, help="Path to track metadata CSV")
     parser.add_argument("--seq_length", type=int, default=4, help="Sequence length (consecutive frames)")
-    parser.add_argument("--stride", type=int, default=1, help="Stride between sequence windows")
+    parser.add_argument("--stride", type=int, default=3, help="Stride between sequence windows (default 3 to avoid redundant 1-hour overlap)")
     parser.add_argument("--max_samples", type=int, default=None, help="Optional max sample limit for fast experimentation")
     parser.add_argument("--num_workers", type=int, default=2, help="DataLoader workers (default 2 for Windows)")
     parser.add_argument("--spatial_backbone", type=str, default="convnext_tiny", help="Spatial backbone name")
     parser.add_argument("--temporal_engine", type=str, default="transformer", choices=["transformer", "gru"])
     parser.add_argument("--hidden_dim", type=int, default=256, help="Temporal hidden feature dimension")
-    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
-    parser.add_argument("--epochs", type=int, default=20, help="Total training epochs")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size (default 32 for optimal GPU utilization)")
+    parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
     parser.add_argument("--lr", type=float, default=1.5e-4, help="Initial learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
@@ -175,6 +175,7 @@ def main():
             data_dir=args.data_dir,
             track_csv=args.track_csv,
             seq_length=args.seq_length,
+            stride=args.stride,
             is_train=True
         )
         if len(full_ds) == 0:
@@ -188,9 +189,12 @@ def main():
             sys.exit(1)
 
         if args.max_samples and len(full_ds) > args.max_samples:
+            import random
+            random.seed(42)
+            sampled_indices = random.sample(range(len(full_ds)), args.max_samples)
             from torch.utils.data import Subset
-            full_ds = Subset(full_ds, list(range(args.max_samples)))
-            print(f"[Sampling] Limited dataset to first {args.max_samples} sequences for fast training.")
+            full_ds = Subset(full_ds, sampled_indices)
+            print(f"[Sampling] Randomly sampled {args.max_samples} sequences across all historical typhoons (1978-2023).")
 
         val_size = max(1, int(len(full_ds) * 0.15))
         train_size = len(full_ds) - val_size
