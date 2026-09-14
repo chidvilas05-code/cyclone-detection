@@ -17,9 +17,7 @@ Usage:
 
 import os
 import sys
-
-# Prevent CUDA memory fragmentation
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+import gc
 
 from pathlib import Path
 import argparse
@@ -65,6 +63,7 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--save_dir", type=str, default="models/sequence_model", help="Directory to save checkpoints")
+    parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint .pt to resume training from")
     parser.add_argument("--dry_run", action="store_true", help="Run 2 mini-epochs with mock data to verify setup")
     parser.add_argument("--eval_after_train", action="store_true", default=True, help="Run complete evaluation suite after training")
     return parser.parse_args()
@@ -214,19 +213,20 @@ def main():
         train_ds, val_ds = random_split(full_ds, [train_size, val_size])
         epochs = args.epochs
 
+    # On Windows, pin_memory=False avoids CachingHostAllocator page-locked memory leaks
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        pin_memory=("cuda" in device.type)
+        pin_memory=False
     )
     val_loader = DataLoader(
         val_ds,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        pin_memory=("cuda" in device.type)
+        pin_memory=False
     )
 
     print(f"Dataset Loaded: {len(train_ds)} train sequences | {len(val_ds)} val sequences")
@@ -267,13 +267,32 @@ def main():
     save_path = Path(args.save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
+    start_epoch = 1
     best_val_acc = 0.0
+
+    # 4. Checkpoint Resumption
+    if args.resume and os.path.exists(args.resume):
+        print(f"[Resume] Loading checkpoint from {args.resume}...")
+        ckpt = torch.load(args.resume, map_location=device, weights_only=False)
+        model.load_state_dict(ckpt.get("model_state_dict", ckpt))
+        if "epoch" in ckpt:
+            start_epoch = int(ckpt["epoch"]) + 1
+            best_val_acc = float(ckpt.get("val_acc", 0.0))
+            print(f"[Resume] Successfully resumed! Continuing from Epoch {start_epoch} (Previous Best Val Acc: {best_val_acc*100:.2f}%)")
+        if "optimizer_state_dict" in ckpt:
+            try:
+                optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            except Exception:
+                pass
+
     history = []
 
     print("\nStarting Training Execution...")
-    for epoch in range(1, epochs + 1):
+    for epoch in range(start_epoch, epochs + 1):
+        gc.collect()
         if "cuda" in device.type:
             torch.cuda.empty_cache()
+
         t0 = time.time()
         tr_loss, tr_acc, tr_mae = train_epoch(
             epoch, epochs, model, train_loader, optimizer, scaler,
@@ -304,6 +323,7 @@ def main():
             ckpt = {
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
                 "val_acc": val_acc,
                 "val_mae": val_mae,
                 "seq_length": args.seq_length,
@@ -313,6 +333,10 @@ def main():
             }
             torch.save(ckpt, save_path / "best_sequence_model.pt")
             print(f"  --> Saved new best checkpoint (Val Acc: {val_acc*100:.2f}%)")
+
+        gc.collect()
+        if "cuda" in device.type:
+            torch.cuda.empty_cache()
 
     print("\nTraining Completed Successfully!")
     if args.dry_run:
