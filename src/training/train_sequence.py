@@ -38,6 +38,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.data_prep.dataset_sequence import CycloneSequenceDataset
 from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCycloneModel, SpatiotemporalCycloneModel
+from src.models.losses import FocalOrdinalLoss
 from src.evaluation.evaluate_sequence import run_sequence_evaluation
 
 from tqdm import tqdm
@@ -56,6 +57,9 @@ def parse_args():
     parser.add_argument("--hidden_dim", type=int, default=256, help="Temporal hidden feature dimension")
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size (default 8 = 32 frames per batch, safe for 8GB GPU)")
     parser.add_argument("--grad_accum_steps", type=int, default=2, help="Gradient accumulation steps (effective batch size = batch_size * grad_accum_steps)")
+    parser.add_argument("--use_focal_loss", action="store_true", default=True, help="Use Class-Balanced Focal Ordinal Loss for category classification")
+    parser.add_argument("--focal_gamma", type=float, default=2.0, help="Focal loss focusing parameter gamma")
+    parser.add_argument("--ordinal_weight", type=float, default=0.15, help="Ordinal distance penalty weight")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
     parser.add_argument("--lr", type=float, default=1.5e-4, help="Initial learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
@@ -238,9 +242,23 @@ def main():
     ).to(device)
 
     # 3. Loss & Optimizer Setup
-    criterion_cat = nn.CrossEntropyLoss(label_smoothing=0.01)
-    criterion_wind = nn.SmoothL1Loss()
-    criterion_trend = nn.CrossEntropyLoss()
+    if args.use_focal_loss:
+        # Balanced alpha weights across 5 WMO tiers: inverse frequency smoothed
+        alpha_weights = torch.tensor([1.0, 1.2, 1.6, 1.3, 2.2], dtype=torch.float32).to(device)
+        criterion_cat = FocalOrdinalLoss(
+            num_classes=5,
+            gamma=args.focal_gamma,
+            alpha=alpha_weights,
+            ordinal_weight=args.ordinal_weight,
+            label_smoothing=0.01
+        )
+        print(f"[Loss Setup] Using Class-Balanced Focal Ordinal Loss (gamma={args.focal_gamma}, ordinal_weight={args.ordinal_weight})")
+    else:
+        criterion_cat = nn.CrossEntropyLoss(label_smoothing=0.01)
+
+    criterion_cat = criterion_cat.to(device)
+    criterion_wind = nn.SmoothL1Loss().to(device)
+    criterion_trend = nn.CrossEntropyLoss().to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)

@@ -10,7 +10,8 @@ from .vision_classifier import (
 )
 from .sensory_predictor import CycloneSensoryPredictor
 from .fusion import MultimodalCycloneFusion
-from .spatiotemporal_classifier import SpatiotemporalCycloneModel
+from .spatiotemporal_classifier import SpatiotemporalCycloneModel, DualStreamSpatiotemporalCycloneModel
+from .losses import FocalOrdinalLoss
 
 __all__ = [
     "CycloneVisionModel",
@@ -23,7 +24,9 @@ __all__ = [
     "load_vision_model_from_checkpoint",
     "CycloneSensoryPredictor",
     "MultimodalCycloneFusion",
-    "SpatiotemporalCycloneModel"
+    "SpatiotemporalCycloneModel",
+    "DualStreamSpatiotemporalCycloneModel",
+    "FocalOrdinalLoss"
 ]
 
 

@@ -152,18 +152,59 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
             nn.Linear(64, 3)
         )
 
-    def extract_central_eye_crop(self, x: torch.Tensor) -> torch.Tensor:
+    def compute_vortex_center(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (N, C, H, W)
+        Computes normalized translation offsets (N, 2) in range [-0.25, 0.25]
+        to dynamically track and center around the physical vortex eye.
+        """
+        N, C, H, W = x.shape
+        # Luminance proxy
+        gray = 0.299 * x[:, 0:1] + 0.587 * x[:, 1:2] + 0.114 * x[:, 2:3]  # (N, 1, H, W)
+
+        # Spatial gradients (Sobel filters)
+        sobel_x = torch.tensor([[-1., 0., 1.], [-2., 0., 2.], [-1., 0., 1.]], dtype=x.dtype, device=x.device).view(1, 1, 3, 3)
+        sobel_y = torch.tensor([[-1., -2., -1.], [0., 0., 0.], [1., 2., 1.]], dtype=x.dtype, device=x.device).view(1, 1, 3, 3)
+
+        gx = F.conv2d(gray, sobel_x, padding=1)
+        gy = F.conv2d(gray, sobel_y, padding=1)
+        grad_mag = torch.sqrt(gx * gx + gy * gy + 1e-6)
+
+        # Coordinate grids in [-1, 1]
+        y_grid = torch.linspace(-1.0, 1.0, H, dtype=x.dtype, device=x.device).view(1, 1, H, 1)
+        x_grid = torch.linspace(-1.0, 1.0, W, dtype=x.dtype, device=x.device).view(1, 1, 1, W)
+        dist_sq = y_grid**2 + x_grid**2
+        spatial_prior = torch.exp(-dist_sq / 0.50)
+
+        s_map = (grad_mag + (1.0 - gray) * 0.5) * spatial_prior
+        s_flat = s_map.view(N, -1)
+        weights = F.softmax(s_flat * 4.0, dim=-1).view(N, 1, H, W)
+
+        c_y = (weights * y_grid).sum(dim=(-2, -1))
+        c_x = (weights * x_grid).sum(dim=(-2, -1))
+
+        t_y = torch.clamp(c_y, -0.25, 0.25)
+        t_x = torch.clamp(c_x, -0.25, 0.25)
+        return torch.cat([t_x, t_y], dim=-1)
+
+    def extract_dynamic_vortex_crop(self, x: torch.Tensor) -> torch.Tensor:
         """
         x shape: (N, C, H, W) where N = B * K
-        Extracts the central 50% eyewall & CDO crop and upsamples back to (H, W).
+        Extracts the 50% spatial crop dynamically centered around the active vortex core.
+        Uses GPU Affine Grid Sampling for sub-millisecond execution.
         """
-        h, w = x.shape[2], x.shape[3]
-        crop_h = int(h * self.eye_crop_ratio)
-        crop_w = int(w * self.eye_crop_ratio)
-        ch_start = (h - crop_h) // 2
-        cw_start = (w - crop_w) // 2
-        eye_sub = x[:, :, ch_start : ch_start + crop_h, cw_start : cw_start + crop_w]
-        return F.interpolate(eye_sub, size=(h, w), mode="bilinear", align_corners=False)
+        N, C, H, W = x.shape
+        offsets = self.compute_vortex_center(x)  # (N, 2)
+
+        s = self.eye_crop_ratio
+        theta = torch.zeros((N, 2, 3), dtype=x.dtype, device=x.device)
+        theta[:, 0, 0] = s
+        theta[:, 1, 1] = s
+        theta[:, 0, 2] = offsets[:, 0]
+        theta[:, 1, 2] = offsets[:, 1]
+
+        grid = F.affine_grid(theta, x.size(), align_corners=False)
+        return F.grid_sample(x, grid, mode="bilinear", padding_mode="border", align_corners=False)
 
     def extract_spatiotemporal_features(self, x_seq: torch.Tensor) -> torch.Tensor:
         """
@@ -176,8 +217,8 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         # 1. Full Synoptic Picture Stream
         f_synoptic = self.synoptic_expert(x_flat)  # (B*K, synoptic_dim)
 
-        # 2. Core Eye Zoom Stream
-        x_eye = self.extract_central_eye_crop(x_flat)
+        # 2. Core Eye Zoom Stream (with Dynamic Vortex Centering)
+        x_eye = self.extract_dynamic_vortex_crop(x_flat)
         f_eye = self.eye_expert(x_eye)              # (B*K, eye_dim)
 
         # 3. Dynamic Eye Gating per frame
