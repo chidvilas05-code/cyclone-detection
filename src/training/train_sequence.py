@@ -58,8 +58,8 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size (default 8 = 32 frames per batch, safe for 8GB GPU)")
     parser.add_argument("--grad_accum_steps", type=int, default=2, help="Gradient accumulation steps (effective batch size = batch_size * grad_accum_steps)")
     parser.add_argument("--use_focal_loss", action="store_true", default=True, help="Use Class-Balanced Focal Ordinal Loss for category classification")
-    parser.add_argument("--focal_gamma", type=float, default=2.0, help="Focal loss focusing parameter gamma")
-    parser.add_argument("--ordinal_weight", type=float, default=0.15, help="Ordinal distance penalty weight")
+    parser.add_argument("--focal_gamma", type=float, default=1.0, help="Focal loss focusing parameter gamma (default 1.0)")
+    parser.add_argument("--ordinal_weight", type=float, default=0.08, help="Ordinal distance penalty weight (default 0.08)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
     parser.add_argument("--lr", type=float, default=1.5e-4, help="Initial learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
@@ -243,8 +243,8 @@ def main():
 
     # 3. Loss & Optimizer Setup
     if args.use_focal_loss:
-        # Balanced alpha weights across 5 WMO tiers: inverse frequency smoothed
-        alpha_weights = torch.tensor([1.0, 1.2, 1.6, 1.3, 2.2], dtype=torch.float32).to(device)
+        # Balanced alpha weights across 5 WMO tiers: smooth regularization
+        alpha_weights = torch.tensor([1.0, 1.05, 1.30, 1.15, 1.50], dtype=torch.float32).to(device)
         criterion_cat = FocalOrdinalLoss(
             num_classes=5,
             gamma=args.focal_gamma,

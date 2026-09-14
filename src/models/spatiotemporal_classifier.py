@@ -183,8 +183,17 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         c_y = (weights * y_grid).sum(dim=(-2, -1))
         c_x = (weights * x_grid).sum(dim=(-2, -1))
 
-        t_y = torch.clamp(c_y, -0.25, 0.25)
-        t_x = torch.clamp(c_x, -0.25, 0.25)
+        # Organization Coherence Gate:
+        # Measures peak-to-mean gradient contrast within central region.
+        # If the storm is an early amorphous depression with no eye (low contrast), gate -> 0 (stays at center [0,0]).
+        # If an organized circular eyewall is present (high contrast), gate -> 1 (actively tracks the eyewall).
+        peak_val = s_flat.amax(dim=-1, keepdim=True)
+        mean_val = s_flat.mean(dim=-1, keepdim=True) + 1e-5
+        contrast = peak_val / mean_val  # (N, 1)
+        org_gate = torch.sigmoid((contrast - 2.2) * 2.5)  # (N, 1)
+
+        t_y = torch.clamp(c_y * org_gate, -0.25, 0.25)
+        t_x = torch.clamp(c_x * org_gate, -0.25, 0.25)
         return torch.cat([t_x, t_y], dim=-1)
 
     def extract_dynamic_vortex_crop(self, x: torch.Tensor) -> torch.Tensor:
