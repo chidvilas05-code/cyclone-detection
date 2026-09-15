@@ -8,9 +8,11 @@ Usage:
 
   # Full training on modern-era Digital Typhoon WP dataset (2000-2023):
   python src/training/train_sequence.py `
-      --data_dir data/digital_typhoon_wp `
-      --track_csv data/digital_typhoon_wp/metadata.csv `
+      --data_dir data/sequences `
       --min_year 2000 `
+      --frame_step 3 `
+      --stride 2 `
+      --img_size 256 `
       --epochs 15 `
       --batch_size 8 `
       --grad_accum_steps 2 `
@@ -39,7 +41,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from src.data_prep.dataset_sequence import CycloneSequenceDataset
+from src.data_prep.dataset_sequence import CycloneSequenceDataset, WIND_MEAN, WIND_STD
 from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCycloneModel, SpatiotemporalCycloneModel
 from src.models.losses import FocalOrdinalLoss, WindCategoryConsistencyLoss
 from src.evaluation.evaluate_sequence import run_sequence_evaluation
@@ -54,7 +56,9 @@ def parse_args():
     parser.add_argument("--min_year", type=int, default=2000, help="Filter out pre-min_year satellite scans (default 2000 for modern high-precision era)")
     parser.add_argument("--max_year", type=int, default=None, help="Optional maximum year filter")
     parser.add_argument("--seq_length", type=int, default=4, help="Sequence length (consecutive frames)")
-    parser.add_argument("--stride", type=int, default=3, help="Stride between sequence windows (default 3 to avoid redundant 1-hour overlap)")
+    parser.add_argument("--frame_step", type=int, default=3, help="Step between sequence frames (default 3 for 3-hour delta, spanning 9-12h)")
+    parser.add_argument("--stride", type=int, default=2, help="Stride between sequence windows (default 2 for dense full-dataset training)")
+    parser.add_argument("--img_size", type=int, default=256, help="Input spatial resolution (default 256 for fine eyewall resolution)")
     parser.add_argument("--max_samples", type=int, default=None, help="Optional max sample limit for fast experimentation")
     parser.add_argument("--num_workers", type=int, default=2, help="DataLoader workers (default 2 for Windows)")
     parser.add_argument("--spatial_backbone", type=str, default="convnext_tiny", help="Spatial backbone name")
@@ -66,6 +70,8 @@ def parse_args():
     parser.add_argument("--focal_gamma", type=float, default=1.0, help="Focal loss focusing parameter gamma (default 1.0)")
     parser.add_argument("--ordinal_weight", type=float, default=0.08, help="Ordinal distance penalty weight (default 0.08)")
     parser.add_argument("--consistency_weight", type=float, default=0.20, help="Wind-Category consistency regularization weight (default 0.20)")
+    parser.add_argument("--wind_weight", type=float, default=0.40, help="Normalized wind regression loss weight (default 0.40)")
+    parser.add_argument("--trend_weight", type=float, default=0.05, help="Trend classification loss weight (default 0.05)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
     parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs (default 2)")
     parser.add_argument("--backbone_lr", type=float, default=1.5e-5, help="Spatial backbone learning rate (10x lower to preserve pre-trained features)")
@@ -82,7 +88,7 @@ def parse_args():
 def train_epoch(
     epoch, epochs, model, dataloader, optimizer, scaler,
     criterion_cat, criterion_wind, criterion_trend, criterion_consistency,
-    device, grad_accum_steps=2, consistency_weight=0.20
+    device, grad_accum_steps=2, consistency_weight=0.20, wind_weight=0.40, trend_weight=0.05
 ):
     model.train()
     total_loss = 0.0
@@ -96,18 +102,19 @@ def train_epoch(
     for batch_idx, batch in enumerate(pbar):
         seq = batch["sequence"].to(device, non_blocking=True)
         cat = batch["category"].to(device, non_blocking=True)
-        wind = batch["wind_speed"].to(device, non_blocking=True)
+        wind_kt = batch["wind_speed"].to(device, non_blocking=True)
+        norm_wind = batch.get("norm_wind", (wind_kt - WIND_MEAN) / WIND_STD).to(device, non_blocking=True)
         trend = batch["trend"].to(device, non_blocking=True)
 
         with torch.amp.autocast(device_type="cuda" if "cuda" in device.type else "cpu"):
-            logits, pred_wind, pred_trend = model(seq)
+            logits, pred_norm_wind, pred_trend = model(seq)
             loss_c = criterion_cat(logits, cat)
-            loss_w = criterion_wind(pred_wind, wind)
+            loss_w = criterion_wind(pred_norm_wind, norm_wind)
             loss_t = criterion_trend(pred_trend, trend)
             
-            raw_loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
+            raw_loss = loss_c + wind_weight * loss_w + trend_weight * loss_t
             if criterion_consistency is not None and consistency_weight > 0.0:
-                loss_cons = criterion_consistency(logits, pred_wind)
+                loss_cons = criterion_consistency(logits, pred_norm_wind)
                 raw_loss = raw_loss + consistency_weight * loss_cons
 
             loss = raw_loss / grad_accum_steps
@@ -131,7 +138,10 @@ def train_epoch(
         total_loss += raw_loss.item() * b_size
         preds = torch.argmax(logits, dim=1)
         correct_cat += (preds == cat).sum().item()
-        mae_wind += torch.abs(pred_wind - wind).sum().item()
+
+        # De-normalize wind predictions back to real knots for MAE
+        pred_wind_kt = pred_norm_wind * WIND_STD + WIND_MEAN
+        mae_wind += torch.abs(pred_wind_kt - wind_kt).sum().item()
         total_samples += b_size
 
         pbar.set_postfix({
@@ -149,7 +159,7 @@ def train_epoch(
 def evaluate(
     epoch, epochs, model, dataloader,
     criterion_cat, criterion_wind, criterion_trend, criterion_consistency,
-    device, consistency_weight=0.20
+    device, consistency_weight=0.20, wind_weight=0.40, trend_weight=0.05
 ):
     model.eval()
     total_loss = 0.0
@@ -162,23 +172,26 @@ def evaluate(
         for batch in pbar:
             seq = batch["sequence"].to(device, non_blocking=True)
             cat = batch["category"].to(device, non_blocking=True)
-            wind = batch["wind_speed"].to(device, non_blocking=True)
+            wind_kt = batch["wind_speed"].to(device, non_blocking=True)
+            norm_wind = batch.get("norm_wind", (wind_kt - WIND_MEAN) / WIND_STD).to(device, non_blocking=True)
             trend = batch["trend"].to(device, non_blocking=True)
 
-            logits, pred_wind, pred_trend = model(seq)
+            logits, pred_norm_wind, pred_trend = model(seq)
             loss_c = criterion_cat(logits, cat)
-            loss_w = criterion_wind(pred_wind, wind)
+            loss_w = criterion_wind(pred_norm_wind, norm_wind)
             loss_t = criterion_trend(pred_trend, trend)
-            loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
+            loss = loss_c + wind_weight * loss_w + trend_weight * loss_t
             if criterion_consistency is not None and consistency_weight > 0.0:
-                loss_cons = criterion_consistency(logits, pred_wind)
+                loss_cons = criterion_consistency(logits, pred_norm_wind)
                 loss = loss + consistency_weight * loss_cons
 
             b_size = seq.size(0)
             total_loss += loss.item() * b_size
             preds = torch.argmax(logits, dim=1)
             correct_cat += (preds == cat).sum().item()
-            mae_wind += torch.abs(pred_wind - wind).sum().item()
+
+            pred_wind_kt = pred_norm_wind * WIND_STD + WIND_MEAN
+            mae_wind += torch.abs(pred_wind_kt - wind_kt).sum().item()
             total_samples += b_size
 
             pbar.set_postfix({
@@ -197,9 +210,10 @@ def main():
     args = parse_args()
     device = torch.device(args.device)
     print(f"================================================================")
-    print(f" Spatiotemporal Cyclone Sequence Training Engine")
-    print(f" Device: {device} | Sequence Length: {args.seq_length} frames")
-    print(f" Backbone: {args.spatial_backbone} | Temporal: {args.temporal_engine}")
+    print(f" Spatiotemporal Cyclone Sequence Training Engine (High-Precision)")
+    print(f" Device: {device} | Sequence: {args.seq_length} frames x {args.frame_step}h step ({args.seq_length * args.frame_step}h total span)")
+    print(f" Resolution: {args.img_size}x{args.img_size} | Stride: {args.stride}")
+    print(f" Backbone: {args.spatial_backbone} | Temporal: {args.temporal_engine} (Cross-Attention Fusion)")
     if args.min_year:
         print(f" Dataset Era: {args.min_year} - {args.max_year if args.max_year else 'Present'} (Modern High-Precision Scans)")
     print(f" Differential LR: Backbone={args.backbone_lr:.1e} | Temporal/Heads={args.lr:.1e}")
@@ -208,15 +222,17 @@ def main():
     # 1. Dataset Instantiation
     if args.dry_run:
         print("[DRY-RUN] Initializing synthetic 4-frame cyclone sequences...")
-        train_ds = CycloneSequenceDataset(seq_length=args.seq_length, mock_num_samples=32, is_train=True)
-        val_ds = CycloneSequenceDataset(seq_length=args.seq_length, mock_num_samples=16, is_train=False)
+        train_ds = CycloneSequenceDataset(seq_length=args.seq_length, frame_step=args.frame_step, img_size=args.img_size, mock_num_samples=32, is_train=True)
+        val_ds = CycloneSequenceDataset(seq_length=args.seq_length, frame_step=args.frame_step, img_size=args.img_size, mock_num_samples=16, is_train=False)
         epochs = 2
     else:
         full_ds = CycloneSequenceDataset(
             data_dir=args.data_dir,
             track_csv=args.track_csv,
             seq_length=args.seq_length,
+            frame_step=args.frame_step,
             stride=args.stride,
+            img_size=args.img_size,
             min_year=args.min_year,
             max_year=args.max_year,
             is_train=True
@@ -244,7 +260,7 @@ def main():
         train_ds, val_ds = random_split(full_ds, [train_size, val_size])
         epochs = args.epochs
 
-    # On Windows, pin_memory=False avoids CachingHostAllocator page-locked memory leaks
+    # DataLoader setup: pin_memory=False avoids CachingHostAllocator leaks on Windows
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,
@@ -274,7 +290,6 @@ def main():
 
     # 3. Loss & Optimizer Setup
     if args.use_focal_loss:
-        # Balanced alpha weights across 5 WMO tiers: smooth regularization
         alpha_weights = torch.tensor([1.0, 1.05, 1.30, 1.15, 1.50], dtype=torch.float32).to(device)
         criterion_cat = FocalOrdinalLoss(
             num_classes=5,
@@ -358,12 +373,16 @@ def main():
             epoch, epochs, model, train_loader, optimizer, scaler,
             criterion_cat, criterion_wind, criterion_trend, criterion_consistency, device,
             grad_accum_steps=args.grad_accum_steps,
-            consistency_weight=args.consistency_weight
+            consistency_weight=args.consistency_weight,
+            wind_weight=args.wind_weight,
+            trend_weight=args.trend_weight
         )
         val_loss, val_acc, val_mae = evaluate(
             epoch, epochs, model, val_loader,
             criterion_cat, criterion_wind, criterion_trend, criterion_consistency, device,
-            consistency_weight=args.consistency_weight
+            consistency_weight=args.consistency_weight,
+            wind_weight=args.wind_weight,
+            trend_weight=args.trend_weight
         )
         scheduler.step()
         elapsed = time.time() - t0
@@ -389,6 +408,8 @@ def main():
                 "val_acc": val_acc,
                 "val_mae": val_mae,
                 "seq_length": args.seq_length,
+                "frame_step": args.frame_step,
+                "img_size": args.img_size,
                 "spatial_backbone": args.spatial_backbone,
                 "temporal_engine": args.temporal_engine,
                 "hidden_dim": args.hidden_dim

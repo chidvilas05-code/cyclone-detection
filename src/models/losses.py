@@ -120,11 +120,16 @@ class WindCategoryConsistencyLoss(nn.Module):
     def forward(self, logits: torch.Tensor, pred_wind: torch.Tensor) -> torch.Tensor:
         """
         logits: (B, num_classes)
-        pred_wind: (B,) or (B, 1) continuous wind speed in knots
+        pred_wind: (B,) or (B, 1) continuous or normalized wind speed
         """
         wind = pred_wind.view(-1, 1)  # (B, 1)
+        # If input wind is normalized (mean ~ 0, std ~ 1), convert to knots
+        if wind.abs().mean() < 10.0:
+            wind = wind * 23.2 + 48.4
+
         probs = F.softmax(logits, dim=-1)  # (B, 5)
         log_probs = F.log_softmax(logits, dim=-1)  # (B, 5)
+
 
         # Soft Gaussian distribution over classes based on predicted wind speed
         diff = (wind - self.centers.unsqueeze(0)) / (self.sigmas.unsqueeze(0) + 1e-6)  # (B, 5)

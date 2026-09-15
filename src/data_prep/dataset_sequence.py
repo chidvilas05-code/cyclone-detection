@@ -65,25 +65,33 @@ class CoherentSequenceTransform:
         return torch.stack(processed_frames, dim=0)
 
 
+WIND_MEAN = 48.4
+WIND_STD = 23.2
+
+
 class CycloneSequenceDataset(Dataset):
     """
     Spatiotemporal Dataset ingesting consecutive multi-frame windows of tropical cyclones.
-    Compatible with Digital Typhoon WP (1-hour / 30-min intervals) and track archives.
+    Supports wide temporal window strides (e.g., 3-hour delta across frames) to model
+    meaningful physical intensification, vortex rotation, and eyewall evolution.
     """
     def __init__(
         self,
         data_dir: Optional[str] = None,
         track_csv: Optional[str] = None,
         seq_length: int = 4,
-        stride: int = 1,
-        img_size: int = 224,
+        frame_step: int = 3,
+        stride: int = 2,
+        img_size: int = 256,
         min_year: Optional[int] = None,
         max_year: Optional[int] = None,
         is_train: bool = True,
         mock_num_samples: Optional[int] = None
     ):
         self.seq_length = seq_length
-        self.stride = stride
+        self.frame_step = max(1, frame_step)
+        self.stride = max(1, stride)
+        self.img_size = img_size
         self.min_year = min_year
         self.max_year = max_year
         self.is_train = is_train
@@ -102,7 +110,7 @@ class CycloneSequenceDataset(Dataset):
         for i in range(n_samples):
             base_wind = float(np.random.uniform(25.0, 110.0))
             wind_trend = float(np.random.uniform(-4.0, 5.0))
-            winds = [max(15.0, base_wind + wind_trend * step) for step in range(self.seq_length)]
+            winds = [max(15.0, base_wind + wind_trend * step * self.frame_step) for step in range(self.seq_length)]
             curr_wind = winds[-1]
 
             if curr_wind < 34: cat = 0
@@ -112,8 +120,8 @@ class CycloneSequenceDataset(Dataset):
             else: cat = 4
 
             delta = curr_wind - winds[0]
-            if delta < -5.0: trend = 0
-            elif delta > 5.0: trend = 2
+            if delta < -8.0: trend = 0
+            elif delta > 8.0: trend = 2
             else: trend = 1
 
             self.samples.append({
@@ -123,6 +131,7 @@ class CycloneSequenceDataset(Dataset):
                 "winds": winds,
                 "category": cat,
                 "target_wind": curr_wind,
+                "norm_wind": (curr_wind - WIND_MEAN) / WIND_STD,
                 "target_trend": trend,
                 "seed": i + (0 if self.is_train else 10000)
             })
@@ -134,7 +143,6 @@ class CycloneSequenceDataset(Dataset):
           ├── image_png/image_png/{storm_id}/ (or directly {storm_id}/)
           └── metadata/metadata/{storm_id}.csv
         """
-        # 1. Resolve image root directory
         possible_img_roots = [
             data_path / "image_png" / "image_png",
             data_path / "image_png",
@@ -149,7 +157,6 @@ class CycloneSequenceDataset(Dataset):
         if img_root is None:
             img_root = data_path
 
-        # 2. Resolve metadata root directory
         possible_meta_roots = [
             data_path / "metadata" / "metadata",
             data_path / "metadata",
@@ -165,7 +172,6 @@ class CycloneSequenceDataset(Dataset):
         total_indexed_sequences = 0
 
         for s_dir in sorted(storm_dirs):
-            # Apply year filtering if specified (e.g. min_year=2000, min_year=2015)
             s_year = 2000
             try:
                 s_year = int(s_dir.name[:4])
@@ -180,7 +186,7 @@ class CycloneSequenceDataset(Dataset):
             if len(img_files) < self.seq_length:
                 continue
 
-            # Check for matching metadata CSV
+            # Load metadata CSV
             meta_map = {}
             if meta_root:
                 m_csv = meta_root / f"{s_dir.name}.csv"
@@ -188,7 +194,6 @@ class CycloneSequenceDataset(Dataset):
                     try:
                         df = pd.read_csv(m_csv)
                         for _, row in df.iterrows():
-                            # Map filename to wind
                             f_name = str(row.get("file_1", "")).replace(".h5", ".png")
                             w_val = float(row.get("wind", 0.0))
                             p_val = float(row.get("pressure", 1010.0))
@@ -201,69 +206,73 @@ class CycloneSequenceDataset(Dataset):
                     except Exception:
                         pass
 
-            for start_idx in range(0, len(img_files) - self.seq_length + 1, self.stride):
-                window_files = img_files[start_idx : start_idx + self.seq_length]
-                
-                # Determine wind speeds across the window
-                winds = []
-                for p in window_files:
-                    w = meta_map.get(p.name, None)
-                    if w is None:
-                        w = 45.0  # Default nominal tropical storm wind
-                    winds.append(w)
+            # Wide-window temporal sampling with configurable frame_step
+            step = self.frame_step
+            min_span = (self.seq_length - 1) * step + 1
 
-                curr_wind = float(winds[-1])
-                
-                # Category assignment (WMO 5 tiers)
-                if curr_wind < 34.0:
-                    curr_cat = 0
-                elif curr_wind < 48.0:
-                    curr_cat = 1
-                elif curr_wind < 64.0:
-                    curr_cat = 2
-                elif curr_wind < 90.0:
-                    curr_cat = 3
-                else:
-                    curr_cat = 4
+            if len(img_files) >= min_span:
+                for start_idx in range(0, len(img_files) - min_span + 1, self.stride):
+                    window_files = [img_files[start_idx + i * step] for i in range(self.seq_length)]
+                    self._append_sequence_sample(window_files, meta_map, s_dir.name, s_year)
+                    total_indexed_sequences += 1
+            else:
+                adaptive_step = max(1, (len(img_files) - 1) // (self.seq_length - 1))
+                span = (self.seq_length - 1) * adaptive_step + 1
+                for start_idx in range(0, len(img_files) - span + 1, self.stride):
+                    window_files = [img_files[start_idx + i * adaptive_step] for i in range(self.seq_length)]
+                    self._append_sequence_sample(window_files, meta_map, s_dir.name, s_year)
+                    total_indexed_sequences += 1
 
-                # Intensity trend calculation
-                delta_w = curr_wind - winds[0]
-                if delta_w < -5.0:
-                    trend = 0  # Weakening
-                elif delta_w > 5.0:
-                    trend = 2  # Intensifying
-                else:
-                    trend = 1  # Steady
+    def _append_sequence_sample(self, window_files: List[Path], meta_map: Dict[str, float], storm_id: str, year: int):
+        winds = []
+        for p in window_files:
+            w = meta_map.get(p.name, None)
+            if w is None:
+                w = 45.0
+            winds.append(w)
 
-                self.samples.append({
-                    "type": "files",
-                    "storm_id": s_dir.name,
-                    "year": s_year,
-                    "paths": [str(p) for p in window_files],
-                    "category": curr_cat,
-                    "target_wind": curr_wind,
-                    "target_trend": trend
-                })
-                total_indexed_sequences += 1
+        curr_wind = float(winds[-1])
+        if curr_wind < 34.0: curr_cat = 0
+        elif curr_wind < 48.0: curr_cat = 1
+        elif curr_wind < 64.0: curr_cat = 2
+        elif curr_wind < 90.0: curr_cat = 3
+        else: curr_cat = 4
+
+        # Real 9-12 hour evolution trend
+        delta_w = curr_wind - winds[0]
+        if delta_w < -8.0: trend = 0      # Significant weakening over 9-12h
+        elif delta_w > 8.0: trend = 2     # Intensification / Rapid Intensification
+        else: trend = 1                  # Steady
+
+        self.samples.append({
+            "type": "files",
+            "storm_id": storm_id,
+            "year": year,
+            "paths": [str(p) for p in window_files],
+            "category": curr_cat,
+            "target_wind": curr_wind,
+            "norm_wind": (curr_wind - WIND_MEAN) / WIND_STD,
+            "target_trend": trend
+        })
 
     def __len__(self) -> int:
         return len(self.samples)
 
     def _render_mock_cyclone_frame(self, wind: float, step: int, seed: int) -> Image.Image:
         np.random.seed(seed + step * 37)
-        canvas = np.zeros((224, 224, 3), dtype=np.uint8)
-        center = (112, 112)
+        canvas = np.zeros((self.img_size, self.img_size, 3), dtype=np.uint8)
+        center = (self.img_size // 2, self.img_size // 2)
         angle = step * 25.0
         for arm in range(3):
             arm_angle = angle + arm * 120
             pts = []
-            for r in range(15, 95, 5):
+            for r in range(15, int(self.img_size * 0.42), 5):
                 theta = np.deg2rad(arm_angle + r * 2.2)
                 x = int(center[0] + r * np.cos(theta))
                 y = int(center[1] + r * np.sin(theta))
                 pts.append([x, y])
             cv2.polylines(canvas, [np.array(pts, dtype=np.int32)], False, (180, 200, 255), 7)
-        eye_r = max(5, int(18 - (wind / 15.0)))
+        eye_r = max(5, int(22 - (wind / 12.0)))
         cv2.circle(canvas, center, int(eye_r * 2.2), (235, 240, 255), -1)
         cv2.circle(canvas, center, eye_r, (25, 25, 30), -1)
         cv2.GaussianBlur(canvas, (11, 11), 3.0, dst=canvas)
@@ -286,5 +295,7 @@ class CycloneSequenceDataset(Dataset):
             "sequence": seq_tensor,
             "category": torch.tensor(sample["category"], dtype=torch.long),
             "wind_speed": torch.tensor(sample["target_wind"], dtype=torch.float32),
+            "norm_wind": torch.tensor(sample["norm_wind"], dtype=torch.float32),
             "trend": torch.tensor(sample["target_trend"], dtype=torch.long)
         }
+

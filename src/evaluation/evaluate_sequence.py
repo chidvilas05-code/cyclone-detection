@@ -90,21 +90,26 @@ def run_sequence_evaluation(
         for batch in dataloader:
             seq = batch["sequence"].to(device)
             cat = batch["category"].to(device)
-            wind = batch["wind_speed"].to(device)
+            wind_kt = batch["wind_speed"].to(device)
             trend = batch["trend"].to(device)
 
-            logits, pred_wind, pred_trend = model(seq)
+            # Forward pass
+            logits, pred_norm_wind, pred_trend = model(seq)
             probs = F.softmax(logits, dim=1)
+
+            # De-normalize wind predictions to knots
+            pred_wind_kt = pred_norm_wind * 23.2 + 48.4
 
             all_cat_probs.append(probs.cpu().numpy())
             all_cat_preds.append(torch.argmax(probs, dim=1).cpu().numpy())
             all_cat_targets.append(cat.cpu().numpy())
 
-            all_wind_preds.append(pred_wind.cpu().numpy())
-            all_wind_targets.append(wind.cpu().numpy())
+            all_wind_preds.append(pred_wind_kt.cpu().numpy())
+            all_wind_targets.append(wind_kt.cpu().numpy())
 
             all_trend_preds.append(torch.argmax(pred_trend, dim=1).cpu().numpy())
             all_trend_targets.append(trend.cpu().numpy())
+
 
     y_true_cat = np.concatenate(all_cat_targets)
     y_pred_cat = np.concatenate(all_cat_preds)

@@ -30,14 +30,62 @@ class PositionalEncoding(nn.Module):
         return x + self.pe[:, :seq_len, :]
 
 
+class CrossAttentionStreamFusion(nn.Module):
+    """
+    Bidirectional Interactive Cross-Attention Stream Fusion:
+    - Eye features act as Query to probe Synoptic environmental context (shear, outer spiral bands).
+    - Synoptic features act as Query to probe central core convection & eyewall clarity.
+    - Features are concatenated with residual connections and projected into hidden_dim.
+    """
+    def __init__(self, eye_dim: int, synoptic_dim: int, hidden_dim: int, num_heads: int = 4, dropout: float = 0.15):
+        super().__init__()
+        self.proj_eye = nn.Linear(eye_dim, hidden_dim)
+        self.proj_syn = nn.Linear(synoptic_dim, hidden_dim)
+
+        self.cross_attn_eye = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, dropout=dropout, batch_first=True)
+        self.cross_attn_syn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, dropout=dropout, batch_first=True)
+
+        self.norm1 = nn.LayerNorm(hidden_dim)
+        self.norm2 = nn.LayerNorm(hidden_dim)
+
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim * 2),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.LayerNorm(hidden_dim)
+        )
+
+    def forward(self, f_eye: torch.Tensor, f_synoptic: torch.Tensor) -> torch.Tensor:
+        """
+        f_eye: (N, eye_dim) where N = B * K
+        f_synoptic: (N, synoptic_dim)
+        returns: (N, hidden_dim)
+        """
+        e = self.proj_eye(f_eye).unsqueeze(1)  # (N, 1, hidden_dim)
+        s = self.proj_syn(f_synoptic).unsqueeze(1)  # (N, 1, hidden_dim)
+
+        # Cross Attention: Eye queries Synoptic
+        e_ctx, _ = self.cross_attn_eye(query=e, key=s, value=s)
+        e_out = self.norm1(e + e_ctx).squeeze(1)
+
+        # Cross Attention: Synoptic queries Eye
+        s_ctx, _ = self.cross_attn_syn(query=s, key=e, value=e)
+        s_out = self.norm2(s + s_ctx).squeeze(1)
+
+        combined = torch.cat([e_out, s_out], dim=-1)
+        out = self.mlp(combined)
+        return out
+
+
 class DualStreamSpatiotemporalCycloneModel(nn.Module):
     """
     Dual-Stream Spatiotemporal Architecture:
       - Stream 1 (Core Eye Expert): Ingests the 50% central eye / eyewall zoom for each frame.
       - Stream 2 (Synoptic Expert): Ingests the full 100% synoptic satellite image.
-      - Dynamic Cross-Scale Gating per frame: Reconciles eye vs synoptic features based on storm maturity.
-      - Temporal Transformer: Models sequential time dynamics [t-K+1, ..., t] across both streams.
-      - Tri-Head Predictor: Category (5 tiers) + Wind Speed (kt) + Intensity Trend (Weakening/Steady/Intensifying).
+      - Interactive Cross-Attention Stream Fusion: Bidirectional cross-attention between eyewall and synoptic field.
+      - Temporal Transformer: Models sequential time dynamics [t-K+1, ..., t] across multi-hour steps.
+      - Tri-Head Predictor: Category (5 tiers) + Normalized Wind Speed (kt) + Intensity Trend (Weakening/Steady/Intensifying).
     """
     def __init__(
         self,
@@ -93,13 +141,15 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
             nn.Sigmoid()
         )
 
-        # Cross-Scale Spatial Fusion to project into temporal hidden_dim
-        self.cross_scale_fusion = nn.Sequential(
-            nn.Linear(eye_dim + synoptic_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.GELU(),
-            nn.Dropout(p=dropout / 2.0)
+        # Interactive Cross-Attention Stream Fusion
+        self.cross_scale_fusion = CrossAttentionStreamFusion(
+            eye_dim=eye_dim,
+            synoptic_dim=synoptic_dim,
+            hidden_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout / 2.0
         )
+
 
         # Temporal Sequence Engine
         if temporal_engine.lower() == "transformer":
@@ -144,7 +194,8 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
             nn.SiLU(),
             nn.Linear(64, 1)
         )
-        self.regression_head[-1].bias.data.fill_(50.0)
+        self.regression_head[-1].bias.data.fill_(0.0)
+
 
         self.trend_head = nn.Sequential(
             nn.Linear(hidden_dim, 64),
@@ -234,11 +285,11 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         alpha = 0.30 + 0.70 * self.eye_gate(f_eye)  # (B*K, 1)
         f_gated_eye = f_eye * alpha
 
-        # 4. Cross-Scale Gated Fusion
-        f_combined = torch.cat([f_gated_eye, f_synoptic], dim=-1)
-        z_flat = self.cross_scale_fusion(f_combined) # (B*K, hidden_dim)
+        # 4. Interactive Cross-Attention Stream Fusion
+        z_flat = self.cross_scale_fusion(f_gated_eye, f_synoptic) # (B*K, hidden_dim)
 
         return z_flat.view(B, K, self.hidden_dim)
+
 
     def forward(
         self,
