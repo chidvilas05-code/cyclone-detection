@@ -6,19 +6,24 @@ Usage:
   # Dry-run test (verifies full pipeline with synthetic data):
   python src/training/train_sequence.py --dry_run
 
-  # Full training on downloaded Digital Typhoon WP dataset:
-  python src/training/train_sequence.py \
-      --data_dir data/digital_typhoon_wp \
-      --track_csv data/digital_typhoon_wp/metadata.csv \
-      --epochs 20 \
-      --batch_size 16 \
+  # Full training on modern-era Digital Typhoon WP dataset (2000-2023):
+  python src/training/train_sequence.py `
+      --data_dir data/digital_typhoon_wp `
+      --track_csv data/digital_typhoon_wp/metadata.csv `
+      --min_year 2000 `
+      --epochs 15 `
+      --batch_size 8 `
+      --grad_accum_steps 2 `
+      --backbone_lr 1.5e-5 `
+      --lr 3.0e-4 `
+      --consistency_weight 0.20 `
       --device cuda
 """
 
 import os
 import sys
 import gc
-
+import math
 from pathlib import Path
 import argparse
 import time
@@ -36,7 +41,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.data_prep.dataset_sequence import CycloneSequenceDataset
 from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCycloneModel, SpatiotemporalCycloneModel
-from src.models.losses import FocalOrdinalLoss
+from src.models.losses import FocalOrdinalLoss, WindCategoryConsistencyLoss
 from src.evaluation.evaluate_sequence import run_sequence_evaluation
 
 from tqdm import tqdm
@@ -46,6 +51,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train Spatiotemporal Cyclone Sequence Model")
     parser.add_argument("--data_dir", type=str, default="data/sequences", help="Path to sequence dataset")
     parser.add_argument("--track_csv", type=str, default=None, help="Path to track metadata CSV")
+    parser.add_argument("--min_year", type=int, default=2000, help="Filter out pre-min_year satellite scans (default 2000 for modern high-precision era)")
+    parser.add_argument("--max_year", type=int, default=None, help="Optional maximum year filter")
     parser.add_argument("--seq_length", type=int, default=4, help="Sequence length (consecutive frames)")
     parser.add_argument("--stride", type=int, default=3, help="Stride between sequence windows (default 3 to avoid redundant 1-hour overlap)")
     parser.add_argument("--max_samples", type=int, default=None, help="Optional max sample limit for fast experimentation")
@@ -58,8 +65,11 @@ def parse_args():
     parser.add_argument("--use_focal_loss", action="store_true", default=True, help="Use Class-Balanced Focal Ordinal Loss for category classification")
     parser.add_argument("--focal_gamma", type=float, default=1.0, help="Focal loss focusing parameter gamma (default 1.0)")
     parser.add_argument("--ordinal_weight", type=float, default=0.08, help="Ordinal distance penalty weight (default 0.08)")
+    parser.add_argument("--consistency_weight", type=float, default=0.20, help="Wind-Category consistency regularization weight (default 0.20)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
-    parser.add_argument("--lr", type=float, default=1.5e-4, help="Initial learning rate")
+    parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs (default 2)")
+    parser.add_argument("--backbone_lr", type=float, default=1.5e-5, help="Spatial backbone learning rate (10x lower to preserve pre-trained features)")
+    parser.add_argument("--lr", type=float, default=3.0e-4, help="Temporal transformer & heads learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--save_dir", type=str, default="models/sequence_model", help="Directory to save checkpoints")
@@ -69,7 +79,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def train_epoch(epoch, epochs, model, dataloader, optimizer, scaler, criterion_cat, criterion_wind, criterion_trend, device, grad_accum_steps=2):
+def train_epoch(
+    epoch, epochs, model, dataloader, optimizer, scaler,
+    criterion_cat, criterion_wind, criterion_trend, criterion_consistency,
+    device, grad_accum_steps=2, consistency_weight=0.20
+):
     model.train()
     total_loss = 0.0
     correct_cat = 0
@@ -90,7 +104,12 @@ def train_epoch(epoch, epochs, model, dataloader, optimizer, scaler, criterion_c
             loss_c = criterion_cat(logits, cat)
             loss_w = criterion_wind(pred_wind, wind)
             loss_t = criterion_trend(pred_trend, trend)
+            
             raw_loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
+            if criterion_consistency is not None and consistency_weight > 0.0:
+                loss_cons = criterion_consistency(logits, pred_wind)
+                raw_loss = raw_loss + consistency_weight * loss_cons
+
             loss = raw_loss / grad_accum_steps
 
         if scaler is not None and "cuda" in device.type:
@@ -127,7 +146,11 @@ def train_epoch(epoch, epochs, model, dataloader, optimizer, scaler, criterion_c
     return avg_loss, acc, avg_mae
 
 
-def evaluate(epoch, epochs, model, dataloader, criterion_cat, criterion_wind, criterion_trend, device):
+def evaluate(
+    epoch, epochs, model, dataloader,
+    criterion_cat, criterion_wind, criterion_trend, criterion_consistency,
+    device, consistency_weight=0.20
+):
     model.eval()
     total_loss = 0.0
     correct_cat = 0
@@ -147,6 +170,9 @@ def evaluate(epoch, epochs, model, dataloader, criterion_cat, criterion_wind, cr
             loss_w = criterion_wind(pred_wind, wind)
             loss_t = criterion_trend(pred_trend, trend)
             loss = loss_c + 0.05 * loss_w + 0.30 * loss_t
+            if criterion_consistency is not None and consistency_weight > 0.0:
+                loss_cons = criterion_consistency(logits, pred_wind)
+                loss = loss + consistency_weight * loss_cons
 
             b_size = seq.size(0)
             total_loss += loss.item() * b_size
@@ -174,6 +200,9 @@ def main():
     print(f" Spatiotemporal Cyclone Sequence Training Engine")
     print(f" Device: {device} | Sequence Length: {args.seq_length} frames")
     print(f" Backbone: {args.spatial_backbone} | Temporal: {args.temporal_engine}")
+    if args.min_year:
+        print(f" Dataset Era: {args.min_year} - {args.max_year if args.max_year else 'Present'} (Modern High-Precision Scans)")
+    print(f" Differential LR: Backbone={args.backbone_lr:.1e} | Temporal/Heads={args.lr:.1e}")
     print(f"================================================================")
 
     # 1. Dataset Instantiation
@@ -188,10 +217,12 @@ def main():
             track_csv=args.track_csv,
             seq_length=args.seq_length,
             stride=args.stride,
+            min_year=args.min_year,
+            max_year=args.max_year,
             is_train=True
         )
         if len(full_ds) == 0:
-            print(f"\n[ERROR] No valid cyclone sequence frames found in '{args.data_dir}'!")
+            print(f"\n[ERROR] No valid cyclone sequence frames found in '{args.data_dir}' (min_year={args.min_year})!")
             print(f"  -> Please place your sequence dataset folders in '{args.data_dir}' or specify --data_dir <path>.")
             print("  -> To verify the training pipeline with synthetic sequences on CUDA, run with the '--dry_run' flag:")
             print("     python src/training/train_sequence.py --dry_run --device cuda\n")
@@ -206,7 +237,7 @@ def main():
             sampled_indices = random.sample(range(len(full_ds)), args.max_samples)
             from torch.utils.data import Subset
             full_ds = Subset(full_ds, sampled_indices)
-            print(f"[Sampling] Randomly sampled {args.max_samples} sequences across all historical typhoons (1978-2023).")
+            print(f"[Sampling] Randomly sampled {args.max_samples} sequences.")
 
         val_size = max(1, int(len(full_ds) * 0.15))
         train_size = len(full_ds) - val_size
@@ -259,9 +290,38 @@ def main():
     criterion_cat = criterion_cat.to(device)
     criterion_wind = nn.SmoothL1Loss().to(device)
     criterion_trend = nn.CrossEntropyLoss().to(device)
+    
+    if args.consistency_weight > 0.0:
+        criterion_consistency = WindCategoryConsistencyLoss().to(device)
+        print(f"[Loss Setup] Using Wind-Category Consistency Regularization (weight={args.consistency_weight})")
+    else:
+        criterion_consistency = None
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+    # Parameter groups for Differential Learning Rates:
+    backbone_params = []
+    head_params = []
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
+        if "eye_expert" in name or "synoptic_expert" in name or "backbone" in name:
+            backbone_params.append(param)
+        else:
+            head_params.append(param)
+
+    optimizer = torch.optim.AdamW([
+        {"params": backbone_params, "lr": args.backbone_lr, "weight_decay": args.weight_decay},
+        {"params": head_params, "lr": args.lr, "weight_decay": args.weight_decay}
+    ])
+
+    # 2-epoch linear warmup followed by Cosine Annealing
+    warmup_epochs = args.warmup_epochs
+    def lr_lambda(current_epoch):
+        if current_epoch < warmup_epochs:
+            return float(current_epoch + 1) / float(max(1, warmup_epochs))
+        progress = float(current_epoch - warmup_epochs) / float(max(1, epochs - warmup_epochs))
+        return 0.5 * (1.0 + math.cos(math.pi * progress))
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
     scaler = torch.amp.GradScaler("cuda") if "cuda" in device.type else None
 
     save_path = Path(args.save_dir)
@@ -296,12 +356,14 @@ def main():
         t0 = time.time()
         tr_loss, tr_acc, tr_mae = train_epoch(
             epoch, epochs, model, train_loader, optimizer, scaler,
-            criterion_cat, criterion_wind, criterion_trend, device,
-            grad_accum_steps=args.grad_accum_steps
+            criterion_cat, criterion_wind, criterion_trend, criterion_consistency, device,
+            grad_accum_steps=args.grad_accum_steps,
+            consistency_weight=args.consistency_weight
         )
         val_loss, val_acc, val_mae = evaluate(
             epoch, epochs, model, val_loader,
-            criterion_cat, criterion_wind, criterion_trend, device
+            criterion_cat, criterion_wind, criterion_trend, criterion_consistency, device,
+            consistency_weight=args.consistency_weight
         )
         scheduler.step()
         elapsed = time.time() - t0

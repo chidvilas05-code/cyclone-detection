@@ -77,11 +77,15 @@ class CycloneSequenceDataset(Dataset):
         seq_length: int = 4,
         stride: int = 1,
         img_size: int = 224,
+        min_year: Optional[int] = None,
+        max_year: Optional[int] = None,
         is_train: bool = True,
         mock_num_samples: Optional[int] = None
     ):
         self.seq_length = seq_length
         self.stride = stride
+        self.min_year = min_year
+        self.max_year = max_year
         self.is_train = is_train
         self.transform = CoherentSequenceTransform(img_size=img_size, is_train=is_train)
         self.samples: List[Dict[str, Any]] = []
@@ -114,6 +118,8 @@ class CycloneSequenceDataset(Dataset):
 
             self.samples.append({
                 "type": "mock",
+                "storm_id": f"MOCK_{i:04d}",
+                "year": 2023,
                 "winds": winds,
                 "category": cat,
                 "target_wind": curr_wind,
@@ -159,6 +165,17 @@ class CycloneSequenceDataset(Dataset):
         total_indexed_sequences = 0
 
         for s_dir in sorted(storm_dirs):
+            # Apply year filtering if specified (e.g. min_year=2000, min_year=2015)
+            s_year = 2000
+            try:
+                s_year = int(s_dir.name[:4])
+                if self.min_year is not None and s_year < self.min_year:
+                    continue
+                if self.max_year is not None and s_year > self.max_year:
+                    continue
+            except Exception:
+                pass
+
             img_files = sorted(list(s_dir.glob("*.png")) + list(s_dir.glob("*.jpg")))
             if len(img_files) < self.seq_length:
                 continue
@@ -220,6 +237,8 @@ class CycloneSequenceDataset(Dataset):
 
                 self.samples.append({
                     "type": "files",
+                    "storm_id": s_dir.name,
+                    "year": s_year,
                     "paths": [str(p) for p in window_files],
                     "category": curr_cat,
                     "target_wind": curr_wind,
