@@ -139,10 +139,14 @@ class WindCategoryConsistencyLoss(nn.Module):
         # KL-Divergence between categorical log-probs and soft wind target distribution
         kl_loss = F.kl_div(log_probs, soft_targets, reduction="batchmean")
 
-        # Expected wind consistency: sum_k P(k) * center_k vs pred_wind
-        expected_wind = (probs * self.centers.unsqueeze(0)).sum(dim=-1)  # (B,)
-        wind_diff_loss = F.smooth_l1_loss(expected_wind, wind.squeeze(1))
+        # Expected wind consistency: compute in normalized standard space (std = 23.2 kt)
+        expected_wind_kt = (probs * self.centers.unsqueeze(0)).sum(dim=-1)  # (B,) in knots
+        expected_norm_wind = (expected_wind_kt - 48.4) / 23.2
+        target_norm_wind = (wind.squeeze(1) - 48.4) / 23.2
+
+        wind_diff_loss = F.smooth_l1_loss(expected_norm_wind, target_norm_wind)
 
         total_consistency = kl_loss + self.expected_wind_weight * wind_diff_loss
         return total_consistency
+
 
