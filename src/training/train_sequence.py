@@ -62,27 +62,30 @@ def parse_args():
     parser.add_argument("--max_samples", type=int, default=None, help="Optional max sample limit for fast experimentation")
     parser.add_argument("--num_workers", type=int, default=2, help="DataLoader workers (default 2 for Windows)")
     parser.add_argument("--spatial_backbone", type=str, default="convnext_tiny", help="Spatial backbone name")
-    parser.add_argument("--temporal_engine", type=str, default="transformer", choices=["transformer", "gru"])
+    parser.add_argument("--temporal_engine", type=str, default="gru", choices=["gru", "transformer"], help="Temporal engine: 'gru' (Delta-BiGRU recurrent memory) or 'transformer'")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Temporal hidden feature dimension")
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size (default 8 = 32 frames per batch, safe for 8GB GPU)")
     parser.add_argument("--grad_accum_steps", type=int, default=2, help="Gradient accumulation steps (effective batch size = batch_size * grad_accum_steps)")
     parser.add_argument("--use_focal_loss", action="store_true", default=True, help="Use Class-Balanced Focal Ordinal Loss for category classification")
     parser.add_argument("--focal_gamma", type=float, default=1.0, help="Focal loss focusing parameter gamma (default 1.0)")
     parser.add_argument("--ordinal_weight", type=float, default=0.08, help="Ordinal distance penalty weight (default 0.08)")
-    parser.add_argument("--consistency_weight", type=float, default=0.20, help="Wind-Category consistency regularization weight (default 0.20)")
+    parser.add_argument("--consistency_weight", type=float, default=0.10, help="Wind-Category consistency regularization weight (default 0.10)")
     parser.add_argument("--wind_weight", type=float, default=0.40, help="Normalized wind regression loss weight (default 0.40)")
     parser.add_argument("--trend_weight", type=float, default=0.05, help="Trend classification loss weight (default 0.05)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
     parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs (default 2)")
+    parser.add_argument("--patience", type=int, default=3, help="Early stopping patience: stop if val accuracy does not improve for N epochs")
     parser.add_argument("--backbone_lr", type=float, default=1.5e-5, help="Spatial backbone learning rate (10x lower to preserve pre-trained features)")
-    parser.add_argument("--lr", type=float, default=3.0e-4, help="Temporal transformer & heads learning rate")
-    parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
+    parser.add_argument("--lr", type=float, default=3.0e-4, help="Temporal recurrent & heads learning rate")
+    parser.add_argument("--weight_decay", type=float, default=2e-4, help="Weight decay for regularization")
+    parser.add_argument("--dropout", type=float, default=0.30, help="Dropout rate to prevent overfitting")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--save_dir", type=str, default="models/sequence_model", help="Directory to save checkpoints")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint .pt to resume training from")
     parser.add_argument("--dry_run", action="store_true", help="Run 2 mini-epochs with mock data to verify setup")
     parser.add_argument("--eval_after_train", action="store_true", default=True, help="Run complete evaluation suite after training")
     return parser.parse_args()
+
 
 
 def train_epoch(
@@ -361,6 +364,7 @@ def main():
                 pass
 
     history = []
+    patience_counter = 0
 
     print("\nStarting Training Execution...")
     for epoch in range(start_epoch, epochs + 1):
@@ -401,6 +405,7 @@ def main():
 
         if val_acc > best_val_acc and not args.dry_run:
             best_val_acc = val_acc
+            patience_counter = 0
             ckpt = {
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
@@ -416,12 +421,20 @@ def main():
             }
             torch.save(ckpt, save_path / "best_sequence_model.pt")
             print(f"  --> Saved new best checkpoint (Val Acc: {val_acc*100:.2f}%)")
+        elif not args.dry_run:
+            patience_counter += 1
+            print(f"  [Early Stopping Tracker] No val improvement for {patience_counter}/{args.patience} epochs (Best Val Acc: {best_val_acc*100:.2f}%)")
+            if patience_counter >= args.patience:
+                print(f"\n[Early Stopping Triggered] Validation accuracy stopped improving. Stopping at Epoch {epoch} to prevent overfitting.")
+                print(f"  --> Reverting to best checkpoint from Epoch {epoch - patience_counter} ({best_val_acc*100:.2f}% Val Acc).")
+                break
 
         gc.collect()
         if "cuda" in device.type:
             torch.cuda.empty_cache()
 
     print("\nTraining Completed Successfully!")
+
     if args.dry_run:
         print("[DRY-RUN COMPLETE] Pipeline verified end-to-end! Ready for full training.")
     elif args.eval_after_train:
@@ -438,3 +451,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

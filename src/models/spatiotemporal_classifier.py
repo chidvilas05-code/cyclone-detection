@@ -98,11 +98,11 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         synoptic_backbone_name: str = "convnext_tiny",
         pretrained: bool = True,
         num_classes: int = 5,
-        temporal_engine: str = "transformer",
+        temporal_engine: str = "gru",
         hidden_dim: int = 256,
         num_layers: int = 2,
         num_heads: int = 4,
-        dropout: float = 0.20,
+        dropout: float = 0.30,
         seq_length: int = 4,
         eye_crop_ratio: float = 0.50
     ):
@@ -154,8 +154,16 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
             dropout=dropout / 2.0
         )
 
+        # Explicit Temporal Difference Projection:
+        # Fuses [current state z_t, consecutive frame delta (z_t - z_t-1), global window delta (z_t - z_0)]
+        self.change_projection = nn.Sequential(
+            nn.Linear(hidden_dim * 3, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.GELU(),
+            nn.Dropout(p=dropout / 2.0)
+        )
 
-        # Temporal Sequence Engine
+        # Temporal Sequence Engine (Bidirectional GRU / Transformer)
         if temporal_engine.lower() == "transformer":
             self.pos_encoder = PositionalEncoding(d_model=hidden_dim, max_len=16)
             encoder_layer = nn.TransformerEncoderLayer(
@@ -200,12 +208,12 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         )
         self.regression_head[-1].bias.data.fill_(0.0)
 
-
         self.trend_head = nn.Sequential(
             nn.Linear(hidden_dim, 64),
             nn.SiLU(),
             nn.Linear(64, 3)
         )
+
 
     def compute_vortex_center(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -309,19 +317,32 @@ class DualStreamSpatiotemporalCycloneModel(nn.Module):
         # 1. Dual-stream spatial feature extraction per timestamp
         z_seq = self.extract_spatiotemporal_features(x_seq)  # (B, K, hidden_dim)
 
-        # 2. Temporal modeling across timestamps
-        if self.temporal_engine_type.lower() == "transformer":
-            z_seq = self.pos_encoder(z_seq)
-            temporal_out = self.temporal_encoder(z_seq)       # (B, K, hidden_dim)
-        else:
-            temporal_out, _ = self.temporal_encoder(z_seq)    # (B, K, hidden_dim)
+        # 2. Explicit Temporal Difference Calculation (Tracks exact storm change):
+        # Step-wise change between adjacent frames (t vs t-1)
+        delta_step = torch.zeros_like(z_seq)
+        delta_step[:, 1:] = z_seq[:, 1:] - z_seq[:, :-1]
 
-        # 3. Temporal Context Aggregation
+        # Global change relative to the initial frame in the sequence window (t vs t_0)
+        delta_global = z_seq - z_seq[:, 0:1]
+
+        # Combine current visual state with velocity and total change vectors
+        z_combined = torch.cat([z_seq, delta_step, delta_global], dim=-1)
+        u_seq = self.change_projection(z_combined)  # (B, K, hidden_dim)
+
+        # 3. Temporal Recurrent / Attention modeling across timestamps
+        if self.temporal_engine_type.lower() == "transformer":
+            u_seq = self.pos_encoder(u_seq)
+            temporal_out = self.temporal_encoder(u_seq)       # (B, K, hidden_dim)
+        else:
+            temporal_out, _ = self.temporal_encoder(u_seq)    # (B, K, hidden_dim)
+
+        # 4. Temporal Context Aggregation
         attn_weights = F.softmax(self.temporal_attn(temporal_out), dim=1)  # (B, K, 1)
         context_vector = torch.sum(attn_weights * temporal_out, dim=1)     # (B, hidden_dim)
 
         final_frame_feat = temporal_out[:, -1, :]
         fused_summary = 0.5 * context_vector + 0.5 * final_frame_feat
+
 
         # 4. Multi-Task Heads
         logits = self.classifier_head(fused_summary)
