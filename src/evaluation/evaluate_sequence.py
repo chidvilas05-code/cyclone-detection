@@ -39,6 +39,8 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import label_binarize
 
+from src.data_prep.dataset_sequence import WIND_MEAN, WIND_STD
+
 # Styling
 sns.set_theme(style="whitegrid", palette="muted")
 plt.rcParams.update({
@@ -67,7 +69,8 @@ def run_sequence_evaluation(
     model: torch.nn.Module,
     dataloader: DataLoader,
     device: torch.device,
-    output_dir: Path
+    output_dir: Path,
+    use_tta: bool = False
 ) -> Dict[str, Any]:
     """Runs complete evaluation on the dataset and generates publication-quality plots."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +88,8 @@ def run_sequence_evaluation(
     all_trend_preds = []
     all_trend_targets = []
 
-    print("[Evaluation] Running inference across validation/test sequence split...")
+    tta_str = " (with TTA Horizontal Reflections)" if use_tta else ""
+    print(f"[Evaluation] Running inference across validation/test sequence split{tta_str}...")
     with torch.no_grad():
         for batch in dataloader:
             seq = batch["sequence"].to(device)
@@ -94,11 +98,20 @@ def run_sequence_evaluation(
             trend = batch["trend"].to(device)
 
             # Forward pass
-            logits, pred_norm_wind, pred_trend = model(seq)
+            if use_tta:
+                seq_flip = torch.flip(seq, dims=[-1])
+                logits1, pred_norm_wind1, pred_trend1 = model(seq)
+                logits2, pred_norm_wind2, pred_trend2 = model(seq_flip)
+                logits = 0.5 * (logits1 + logits2)
+                pred_norm_wind = 0.5 * (pred_norm_wind1 + pred_norm_wind2)
+                pred_trend = 0.5 * (pred_trend1 + pred_trend2)
+            else:
+                logits, pred_norm_wind, pred_trend = model(seq)
+
             probs = F.softmax(logits, dim=1)
 
             # De-normalize wind predictions to knots
-            pred_wind_kt = pred_norm_wind * 23.2 + 48.4
+            pred_wind_kt = pred_norm_wind * WIND_STD + WIND_MEAN
 
             all_cat_probs.append(probs.cpu().numpy())
             all_cat_preds.append(torch.argmax(probs, dim=1).cpu().numpy())
@@ -292,6 +305,7 @@ def main():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--output_dir", type=str, default="models/sequence_model")
     parser.add_argument("--mock_samples", type=int, default=100)
+    parser.add_argument("--use_tta", action="store_true", default=True, help="Use Test-Time Augmentation (horizontal reflections)")
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -305,16 +319,23 @@ def main():
 
     eval_loader = DataLoader(eval_ds, batch_size=16, shuffle=False)
 
-    model = DualStreamSpatiotemporalCycloneModel(pretrained=False).to(device)
     ckpt_path = Path(args.checkpoint)
     if ckpt_path.exists():
         ckpt = torch.load(str(ckpt_path), map_location=device, weights_only=False)
+        model = DualStreamSpatiotemporalCycloneModel(
+            spatial_backbone=ckpt.get("spatial_backbone", "convnext_tiny"),
+            temporal_engine=ckpt.get("temporal_engine", "gru"),
+            hidden_dim=ckpt.get("hidden_dim", 256),
+            seq_length=ckpt.get("seq_length", 4),
+            pretrained=False
+        ).to(device)
         model.load_state_dict(ckpt.get("model_state_dict", ckpt))
         print(f"[Evaluation] Loaded weights from {ckpt_path}")
     else:
+        model = DualStreamSpatiotemporalCycloneModel(pretrained=False).to(device)
         print(f"[Evaluation] Checkpoint {ckpt_path} not found; evaluating uninitialized weights.")
 
-    run_sequence_evaluation(model, eval_loader, device, Path(args.output_dir))
+    run_sequence_evaluation(model, eval_loader, device, Path(args.output_dir), use_tta=args.use_tta)
 
 
 if __name__ == "__main__":

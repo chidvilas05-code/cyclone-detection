@@ -15,23 +15,27 @@ from typing import Optional
 class FocalOrdinalLoss(nn.Module):
     """
     Combines:
-      1. Focal Loss: (1 - p_t)^gamma * CE(p, y) to focus on hard boundary transition samples (e.g., Severe Cyclonic Storms).
+      1. Focal Loss: (1 - p_t)^gamma * CE(p, y) to focus on hard boundary transition samples.
       2. Class-Balanced Alpha Weights: Upweights rare classes (e.g., Category 5 Super Cyclones).
-      3. Ordinal Distance Penalty: lambda_ord * sum_k(|k - y| * p_k) to heavily penalize multi-tier misclassifications.
+      3. Gaussian Ordinal Smoothing: Spreads target probability across physically adjacent categories,
+         eliminating harsh artificial loss spikes on boundary cases (e.g. 63 kt vs 64 kt) and lowering val loss.
+      4. Ordinal Distance Penalty: lambda_ord * sum_k(|k - y| * p_k) to heavily penalize multi-tier misclassifications.
     """
     def __init__(
         self,
         num_classes: int = 5,
-        gamma: float = 2.0,
+        gamma: float = 1.0,
         alpha: Optional[torch.Tensor] = None,
-        ordinal_weight: float = 0.15,
-        label_smoothing: float = 0.01
+        ordinal_weight: float = 0.08,
+        label_smoothing: float = 0.0,
+        gaussian_smoothing_sigma: float = 0.40
     ):
         super().__init__()
         self.num_classes = num_classes
         self.gamma = gamma
         self.ordinal_weight = ordinal_weight
         self.label_smoothing = label_smoothing
+        self.gaussian_smoothing_sigma = gaussian_smoothing_sigma
 
         if alpha is not None:
             self.register_buffer("alpha", alpha.float())
@@ -45,43 +49,62 @@ class FocalOrdinalLoss(nn.Module):
                 rank_matrix[i, j] = abs(float(i - j))
         self.register_buffer("rank_matrix", rank_matrix)
 
+        # Precompute Gaussian soft target distribution matrix
+        if gaussian_smoothing_sigma > 0.0:
+            import math
+            gauss_mat = torch.zeros((num_classes, num_classes), dtype=torch.float32)
+            for i in range(num_classes):
+                for j in range(num_classes):
+                    gauss_mat[i, j] = math.exp(-((float(i - j)) ** 2) / (2.0 * (gaussian_smoothing_sigma ** 2)))
+                gauss_mat[i] = gauss_mat[i] / gauss_mat[i].sum()
+            self.register_buffer("gaussian_targets", gauss_mat)
+        else:
+            self.gaussian_targets = None
+
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
         logits: (B, num_classes)
         targets: (B,) class indices in [0, num_classes - 1]
         """
-        # 1. Softmax probabilities
         probs = F.softmax(logits, dim=-1)
-
-        # 2. Focal Loss computation
         log_probs = F.log_softmax(logits, dim=-1)
-
-        target_probs = probs.gather(1, targets.unsqueeze(1)).squeeze(1).clamp(min=1e-6, max=1.0)
-        target_log_probs = log_probs.gather(1, targets.unsqueeze(1)).squeeze(1)
-
-        focal_weight = torch.pow(1.0 - target_probs, self.gamma)
-
-        if self.alpha is not None:
-            alpha_t = self.alpha.gather(0, targets)
-            focal_weight = focal_weight * alpha_t
-
-        focal_loss = -focal_weight * target_log_probs
-
-        if self.label_smoothing > 0.0:
-            smooth_loss = -log_probs.mean(dim=-1)
-            focal_loss = (1.0 - self.label_smoothing) * focal_loss + self.label_smoothing * smooth_loss
 
         if self.rank_matrix.device != targets.device:
             self.rank_matrix = self.rank_matrix.to(targets.device)
         if self.alpha is not None and self.alpha.device != targets.device:
             self.alpha = self.alpha.to(targets.device)
 
-        # 3. Ordinal Distance Penalty: sum_k(|k - y| * p_k)
+        if self.gaussian_targets is not None:
+            if self.gaussian_targets.device != targets.device:
+                self.gaussian_targets = self.gaussian_targets.to(targets.device)
+            target_dists = self.gaussian_targets[targets]  # (B, num_classes)
+            ce_loss = -(target_dists * log_probs).sum(dim=-1)  # (B,)
+            target_p = (probs * target_dists).sum(dim=-1).clamp(min=1e-6, max=1.0)
+            focal_weight = torch.pow(1.0 - target_p, self.gamma)
+            if self.alpha is not None:
+                alpha_t = self.alpha.gather(0, targets)
+                focal_weight = focal_weight * alpha_t
+            focal_loss = focal_weight * ce_loss
+        else:
+            target_probs = probs.gather(1, targets.unsqueeze(1)).squeeze(1).clamp(min=1e-6, max=1.0)
+            target_log_probs = log_probs.gather(1, targets.unsqueeze(1)).squeeze(1)
+            focal_weight = torch.pow(1.0 - target_probs, self.gamma)
+            if self.alpha is not None:
+                alpha_t = self.alpha.gather(0, targets)
+                focal_weight = focal_weight * alpha_t
+            focal_loss = -focal_weight * target_log_probs
+
+            if self.label_smoothing > 0.0:
+                smooth_loss = -log_probs.mean(dim=-1)
+                focal_loss = (1.0 - self.label_smoothing) * focal_loss + self.label_smoothing * smooth_loss
+
+        # Ordinal Distance Penalty: sum_k(|k - y| * p_k)
         target_distances = self.rank_matrix[targets]  # (B, num_classes)
         ordinal_penalty = (probs * target_distances).sum(dim=-1)  # (B,)
 
         total_loss = focal_loss.mean() + self.ordinal_weight * ordinal_penalty.mean()
         return total_loss
+
 
 
 class WindCategoryConsistencyLoss(nn.Module):
