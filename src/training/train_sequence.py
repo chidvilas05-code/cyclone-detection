@@ -53,7 +53,7 @@ from tqdm import tqdm
 
 
 class ModelEMA:
-    """Exponential Moving Average of model parameters to achieve flatter loss basins and lower val loss."""
+    """Exponential Moving Average of model parameters with full buffer synchronization."""
     def __init__(self, model: nn.Module, decay: float = 0.999):
         self.ema_model = copy.deepcopy(model).eval()
         self.decay = decay
@@ -63,8 +63,12 @@ class ModelEMA:
     @torch.no_grad()
     def update(self, model: nn.Module):
         d = self.decay
+        # 1. Update trainable parameters with exponential moving average
         for ema_p, model_p in zip(self.ema_model.parameters(), model.parameters()):
             ema_p.data.mul_(d).add_(model_p.data, alpha=1.0 - d)
+        # 2. Synchronize persistent buffers (BatchNorm running_mean, running_var, num_batches_tracked)
+        for ema_b, model_b in zip(self.ema_model.buffers(), model.buffers()):
+            ema_b.copy_(model_b)
 
     def to(self, device):
         self.ema_model = self.ema_model.to(device)
@@ -91,14 +95,14 @@ def parse_args():
     parser.add_argument("--use_focal_loss", action="store_true", default=True, help="Use Class-Balanced Focal Ordinal Loss for category classification")
     parser.add_argument("--focal_gamma", type=float, default=1.0, help="Focal loss focusing parameter gamma (default 1.0)")
     parser.add_argument("--ordinal_weight", type=float, default=0.08, help="Ordinal distance penalty weight (default 0.08)")
-    parser.add_argument("--gaussian_sigma", type=float, default=0.40, help="Gaussian ordinal label smoothing sigma (default 0.40 to eliminate boundary loss spikes)")
+    parser.add_argument("--gaussian_sigma", type=float, default=0.0, help="Gaussian ordinal label smoothing sigma (default 0.0 for crisp decision boundaries; >0 for soft smoothing)")
     parser.add_argument("--consistency_weight", type=float, default=0.10, help="Wind-Category consistency regularization weight (default 0.10)")
     parser.add_argument("--wind_weight", type=float, default=0.40, help="Normalized wind regression loss weight (default 0.40)")
     parser.add_argument("--trend_weight", type=float, default=0.05, help="Trend classification loss weight (default 0.05)")
-    parser.add_argument("--epochs", type=int, default=20, help="Total training epochs (default 20)")
+    parser.add_argument("--epochs", type=int, default=15, help="Total training epochs (default 15)")
     parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs (default 2)")
     parser.add_argument("--patience", type=int, default=4, help="Early stopping patience: stop if val accuracy does not improve for N epochs (default 4)")
-    parser.add_argument("--use_ema", action="store_true", default=True, help="Maintain Exponential Moving Average of weights (decay=0.999) for evaluation")
+    parser.add_argument("--use_ema", action="store_true", default=False, help="Maintain Exponential Moving Average of weights (decay=0.999) for evaluation")
     parser.add_argument("--use_tta", action="store_true", default=True, help="Use Test-Time Augmentation (TTA) with horizontal reflections during validation")
     parser.add_argument("--backbone_lr", type=float, default=1.5e-5, help="Spatial backbone learning rate (10x lower to preserve pre-trained features)")
     parser.add_argument("--lr", type=float, default=3.0e-4, help="Temporal recurrent & heads learning rate")
