@@ -98,7 +98,7 @@ def parse_args():
     parser.add_argument("--gaussian_sigma", type=float, default=0.0, help="Gaussian ordinal label smoothing sigma (default 0.0 for crisp decision boundaries; >0 for soft smoothing)")
     parser.add_argument("--consistency_weight", type=float, default=0.10, help="Wind-Category consistency regularization weight (default 0.10)")
     parser.add_argument("--wind_weight", type=float, default=0.40, help="Normalized wind regression loss weight (default 0.40)")
-    parser.add_argument("--trend_weight", type=float, default=0.05, help="Trend classification loss weight (default 0.05)")
+    parser.add_argument("--trend_weight", type=float, default=0.02, help="Trend classification loss weight (default 0.02 to prevent loss inflation)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs (default 15)")
     parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs (default 2)")
     parser.add_argument("--patience", type=int, default=4, help="Early stopping patience: stop if val accuracy does not improve for N epochs (default 4)")
@@ -111,6 +111,8 @@ def parse_args():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--save_dir", type=str, default="models/sequence_model", help="Directory to save checkpoints")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint .pt to resume training from")
+    parser.add_argument("--finetune", action="store_true", default=False, help="Warm fine-tuning mode: resumes weights from checkpoint with gentle LR cosine decay")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for deterministic and reproducible train/val splitting")
     parser.add_argument("--dry_run", action="store_true", help="Run 2 mini-epochs with mock data to verify setup")
     parser.add_argument("--eval_after_train", action="store_true", default=True, help="Run complete evaluation suite after training")
     return parser.parse_args()
@@ -304,7 +306,12 @@ def main():
 
         val_size = max(1, int(len(full_ds) * 0.15))
         train_size = len(full_ds) - val_size
-        train_ds, val_ds = random_split(full_ds, [train_size, val_size])
+        train_ds, val_ds = random_split(
+            full_ds,
+            [train_size, val_size],
+            generator=torch.Generator().manual_seed(args.seed)
+        )
+        print(f"[Dataset Split] Seed={args.seed} | Train: {len(train_ds)} sequences | Val: {len(val_ds)} sequences")
         epochs = args.epochs
 
     # DataLoader setup: pin_memory=False avoids CachingHostAllocator leaks on Windows
@@ -376,15 +383,19 @@ def main():
         {"params": head_params, "lr": args.lr, "weight_decay": args.weight_decay}
     ])
 
-    # 2-epoch linear warmup followed by Cosine Annealing
-    warmup_epochs = args.warmup_epochs
-    def lr_lambda(current_epoch):
-        if current_epoch < warmup_epochs:
-            return float(current_epoch + 1) / float(max(1, warmup_epochs))
-        progress = float(current_epoch - warmup_epochs) / float(max(1, epochs - warmup_epochs))
-        return 0.5 * (1.0 + math.cos(math.pi * progress))
+    # 2-epoch linear warmup followed by Cosine Annealing (or smooth cosine decay for fine-tuning)
+    if args.finetune:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
+        print(f"[Fine-Tune] Using CosineAnnealingLR decay across {args.epochs} epochs.")
+    else:
+        warmup_epochs = args.warmup_epochs
+        def lr_lambda(current_epoch):
+            if current_epoch < warmup_epochs:
+                return float(current_epoch + 1) / float(max(1, warmup_epochs))
+            progress = float(current_epoch - warmup_epochs) / float(max(1, epochs - warmup_epochs))
+            return 0.5 * (1.0 + math.cos(math.pi * progress))
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
 
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
     scaler = torch.amp.GradScaler("cuda") if "cuda" in device.type else None
 
     # Exponential Moving Average (EMA) of weights
@@ -405,11 +416,16 @@ def main():
         print(f"[Resume] Loading checkpoint from {args.resume}...")
         ckpt = torch.load(args.resume, map_location=device, weights_only=False)
         model.load_state_dict(ckpt.get("model_state_dict", ckpt))
-        if "epoch" in ckpt:
-            start_epoch = int(ckpt["epoch"]) + 1
+        if "val_acc" in ckpt:
             best_val_acc = float(ckpt.get("val_acc", 0.0))
+        if args.finetune:
+            start_epoch = int(ckpt.get("epoch", 0)) + 1
+            epochs = start_epoch + args.epochs - 1
+            print(f"[Fine-Tune] Loaded weights successfully! Starting {args.epochs} gentle fine-tuning epochs: Epoch {start_epoch} -> Epoch {epochs} (Benchmark to beat: {best_val_acc*100:.2f}%)")
+        elif "epoch" in ckpt:
+            start_epoch = int(ckpt["epoch"]) + 1
             print(f"[Resume] Successfully resumed! Continuing from Epoch {start_epoch} (Previous Best Val Acc: {best_val_acc*100:.2f}%)")
-        if "optimizer_state_dict" in ckpt:
+        if "optimizer_state_dict" in ckpt and not args.finetune:
             try:
                 optimizer.load_state_dict(ckpt["optimizer_state_dict"])
             except Exception:

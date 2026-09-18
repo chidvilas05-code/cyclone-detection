@@ -70,7 +70,8 @@ def run_sequence_evaluation(
     dataloader: DataLoader,
     device: torch.device,
     output_dir: Path,
-    use_tta: bool = False
+    use_tta: bool = False,
+    wind_fusion: bool = False
 ) -> Dict[str, Any]:
     """Runs complete evaluation on the dataset and generates publication-quality plots."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -89,7 +90,13 @@ def run_sequence_evaluation(
     all_trend_targets = []
 
     tta_str = " (with TTA Horizontal Reflections)" if use_tta else ""
-    print(f"[Evaluation] Running inference across validation/test sequence split{tta_str}...")
+    fusion_str = " + Wind-Informed Fusion" if wind_fusion else ""
+    print(f"[Evaluation] Running inference across validation/test sequence split{tta_str}{fusion_str}...")
+
+    # Category centers and spreads for wind-informed Gaussian prior
+    centers = torch.tensor([25.0, 41.0, 56.0, 77.0, 115.0], device=device)
+    sigmas = torch.tensor([7.0, 6.0, 6.5, 9.0, 16.0], device=device)
+
     with torch.no_grad():
         for batch in dataloader:
             seq = batch["sequence"].to(device)
@@ -113,8 +120,17 @@ def run_sequence_evaluation(
             # De-normalize wind predictions to knots
             pred_wind_kt = pred_norm_wind * WIND_STD + WIND_MEAN
 
+            # Multi-Task Joint Inference: Refine ambiguous category boundaries using continuous wind
+            if wind_fusion:
+                diff = (pred_wind_kt.unsqueeze(1) - centers.unsqueeze(0)) / (sigmas.unsqueeze(0) + 1e-6)
+                log_lik = -0.5 * (diff ** 2)
+                fused_log_probs = torch.log(probs + 1e-8) + 0.30 * log_lik
+                cat_preds = torch.argmax(fused_log_probs, dim=1)
+            else:
+                cat_preds = torch.argmax(probs, dim=1)
+
             all_cat_probs.append(probs.cpu().numpy())
-            all_cat_preds.append(torch.argmax(probs, dim=1).cpu().numpy())
+            all_cat_preds.append(cat_preds.cpu().numpy())
             all_cat_targets.append(cat.cpu().numpy())
 
             all_wind_preds.append(pred_wind_kt.cpu().numpy())
@@ -306,6 +322,9 @@ def main():
     parser.add_argument("--output_dir", type=str, default="models/sequence_model")
     parser.add_argument("--mock_samples", type=int, default=100)
     parser.add_argument("--use_tta", action="store_true", default=True, help="Use Test-Time Augmentation (horizontal reflections)")
+    parser.add_argument("--wind_fusion", action="store_true", default=False, help="Use continuous wind likelihood to calibrate category boundary predictions")
+    parser.add_argument("--val_split", type=float, default=0.15, help="Validation fraction to evaluate from data_dir (default 0.15, 0.0 for full data)")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for deterministic evaluation split")
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -313,7 +332,18 @@ def main():
     from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCycloneModel
 
     if args.data_dir and os.path.exists(args.data_dir):
-        eval_ds = CycloneSequenceDataset(data_dir=args.data_dir, is_train=False)
+        full_ds = CycloneSequenceDataset(data_dir=args.data_dir, is_train=False)
+        if args.val_split > 0.0:
+            val_size = max(1, int(len(full_ds) * args.val_split))
+            train_size = len(full_ds) - val_size
+            _, eval_ds = torch.utils.data.random_split(
+                full_ds,
+                [train_size, val_size],
+                generator=torch.Generator().manual_seed(args.seed)
+            )
+            print(f"[Evaluation Split] Using deterministic val split of {len(eval_ds)} samples (seed={args.seed})")
+        else:
+            eval_ds = full_ds
     else:
         eval_ds = CycloneSequenceDataset(mock_num_samples=args.mock_samples, is_train=False)
 
@@ -335,7 +365,7 @@ def main():
         model = DualStreamSpatiotemporalCycloneModel(pretrained=False).to(device)
         print(f"[Evaluation] Checkpoint {ckpt_path} not found; evaluating uninitialized weights.")
 
-    run_sequence_evaluation(model, eval_loader, device, Path(args.output_dir), use_tta=args.use_tta)
+    run_sequence_evaluation(model, eval_loader, device, Path(args.output_dir), use_tta=args.use_tta, wind_fusion=args.wind_fusion)
 
 
 if __name__ == "__main__":
