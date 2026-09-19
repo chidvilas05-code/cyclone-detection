@@ -385,35 +385,13 @@ def main():
         {"params": head_params, "lr": args.lr, "weight_decay": args.weight_decay}
     ])
 
-    # 2-epoch linear warmup followed by Cosine Annealing (or smooth cosine decay for fine-tuning)
-    if args.finetune:
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
-        print(f"[Fine-Tune] Using CosineAnnealingLR decay across {args.epochs} epochs.")
-    else:
-        warmup_epochs = args.warmup_epochs
-        def lr_lambda(current_epoch):
-            if current_epoch < warmup_epochs:
-                return float(current_epoch + 1) / float(max(1, warmup_epochs))
-            progress = float(current_epoch - warmup_epochs) / float(max(1, epochs - warmup_epochs))
-            return 0.5 * (1.0 + math.cos(math.pi * progress))
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
-
-    scaler = torch.amp.GradScaler("cuda") if "cuda" in device.type else None
-
-    # Exponential Moving Average (EMA) of weights
-    model_ema = ModelEMA(model, decay=0.999).to(device) if args.use_ema else None
-    if model_ema is not None:
-        print("[Model EMA] Exponential Moving Average (decay=0.999) active for flat-basin generalization.")
-    if args.use_tta:
-        print("[TTA] Test-Time Augmentation (Horizontal Reflections) active during validation.")
-
+    # 3. Checkpoint Resumption & Start Epoch Setup
     save_path = Path(args.save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
     start_epoch = 1
     best_val_acc = 0.0
 
-    # 4. Checkpoint Resumption
     if args.resume and os.path.exists(args.resume):
         print(f"[Resume] Loading checkpoint from {args.resume}...")
         ckpt = torch.load(args.resume, map_location=device, weights_only=False)
@@ -426,14 +404,52 @@ def main():
             print(f"[Fine-Tune] Loaded weights successfully! Starting {args.epochs} gentle fine-tuning epochs: Epoch {start_epoch} -> Epoch {epochs} (Benchmark to beat: {best_val_acc*100:.2f}%)")
         elif "epoch" in ckpt:
             start_epoch = int(ckpt["epoch"]) + 1
-            print(f"[Resume] Successfully resumed! Continuing from Epoch {start_epoch} (Previous Best Val Acc: {best_val_acc*100:.2f}%)")
+            if start_epoch > epochs:
+                epochs = max(epochs, start_epoch + 4)
+                print(f"[Resume] Automatically extending total epochs to {epochs} to continue training.")
+            print(f"[Resume] Successfully resumed! Continuing from Epoch {start_epoch} to {epochs} (Previous Best Val Acc: {best_val_acc*100:.2f}%)")
         if "optimizer_state_dict" in ckpt and not args.finetune:
             try:
                 optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+                print("[Resume] Optimizer state and momentum successfully restored.")
             except Exception:
                 pass
 
-    history = []
+    # 4. LR Scheduler Setup (Synced with start_epoch)
+    if args.finetune:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
+        print(f"[Fine-Tune] Using CosineAnnealingLR decay across {args.epochs} epochs.")
+    else:
+        warmup_epochs = args.warmup_epochs
+        def lr_lambda(step_idx):
+            curr_ep = (start_epoch - 1) + step_idx
+            if curr_ep < warmup_epochs:
+                return float(curr_ep + 1) / float(max(1, warmup_epochs))
+            progress = float(curr_ep - warmup_epochs) / float(max(1, epochs - warmup_epochs))
+            return 0.5 * (1.0 + math.cos(math.pi * min(1.0, progress)))
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+    scaler = torch.amp.GradScaler("cuda") if "cuda" in device.type else None
+
+    # Exponential Moving Average (EMA) of weights
+    model_ema = ModelEMA(model, decay=0.999).to(device) if args.use_ema else None
+    if model_ema is not None:
+        print("[Model EMA] Exponential Moving Average (decay=0.999) active for flat-basin generalization.")
+    if args.use_tta:
+        print("[TTA] Test-Time Augmentation (Horizontal Reflections) active during validation.")
+
+    # Preserve history across resumed runs
+    history_file = save_path / "training_history.json"
+    if history_file.exists() and args.resume:
+        try:
+            with open(history_file, "r") as f:
+                history = json.load(f)
+            history = [h for h in history if h.get("epoch", 0) < start_epoch]
+            print(f"[Resume] Preserved {len(history)} previous epochs in training history.")
+        except Exception:
+            history = []
+    else:
+        history = []
     patience_counter = 0
 
     print("\nStarting Training Execution...")
