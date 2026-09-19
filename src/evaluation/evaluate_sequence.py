@@ -94,8 +94,8 @@ def run_sequence_evaluation(
     print(f"[Evaluation] Running inference across validation/test sequence split{tta_str}{fusion_str}...")
 
     # Category centers and spreads for wind-informed Gaussian prior
-    centers = torch.tensor([25.0, 41.0, 56.0, 77.0, 115.0], device=device)
-    sigmas = torch.tensor([7.0, 6.0, 6.5, 9.0, 16.0], device=device)
+    centers = torch.tensor([25.0, 40.5, 55.5, 76.5, 105.0], device=device)
+    sigmas = torch.tensor([6.0, 5.5, 6.0, 8.5, 12.0], device=device)
 
     with torch.no_grad():
         for batch in dataloader:
@@ -124,7 +124,7 @@ def run_sequence_evaluation(
             if wind_fusion:
                 diff = (pred_wind_kt.unsqueeze(1) - centers.unsqueeze(0)) / (sigmas.unsqueeze(0) + 1e-6)
                 log_lik = -0.5 * (diff ** 2)
-                fused_log_probs = torch.log(probs + 1e-8) + 0.30 * log_lik
+                fused_log_probs = torch.log(probs + 1e-8) + 0.10 * log_lik
                 cat_preds = torch.argmax(fused_log_probs, dim=1)
             else:
                 cat_preds = torch.argmax(probs, dim=1)
@@ -318,6 +318,10 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate Spatiotemporal Cyclone Model Checkpoint")
     parser.add_argument("--checkpoint", type=str, default="models/sequence_model/best_sequence_model.pt")
     parser.add_argument("--data_dir", type=str, default=None)
+    parser.add_argument("--min_year", type=int, default=2000, help="Filter out pre-min_year satellite scans (default 2000 for modern high-precision era)")
+    parser.add_argument("--frame_step", type=int, default=3, help="Step between sequence frames (default 3)")
+    parser.add_argument("--stride", type=int, default=2, help="Stride between sequence windows (default 2)")
+    parser.add_argument("--img_size", type=int, default=256, help="Input spatial resolution (default 256)")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--output_dir", type=str, default="models/sequence_model")
     parser.add_argument("--mock_samples", type=int, default=100)
@@ -332,7 +336,14 @@ def main():
     from src.models.spatiotemporal_classifier import DualStreamSpatiotemporalCycloneModel
 
     if args.data_dir and os.path.exists(args.data_dir):
-        full_ds = CycloneSequenceDataset(data_dir=args.data_dir, is_train=False)
+        full_ds = CycloneSequenceDataset(
+            data_dir=args.data_dir,
+            min_year=args.min_year,
+            frame_step=args.frame_step,
+            stride=args.stride,
+            img_size=args.img_size,
+            is_train=False
+        )
         if args.val_split > 0.0:
             val_size = max(1, int(len(full_ds) * args.val_split))
             train_size = len(full_ds) - val_size
@@ -341,7 +352,7 @@ def main():
                 [train_size, val_size],
                 generator=torch.Generator().manual_seed(args.seed)
             )
-            print(f"[Evaluation Split] Using deterministic val split of {len(eval_ds)} samples (seed={args.seed})")
+            print(f"[Evaluation Split] Using deterministic modern val split of {len(eval_ds)} samples (seed={args.seed})")
         else:
             eval_ds = full_ds
     else:
