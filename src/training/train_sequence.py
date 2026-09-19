@@ -97,17 +97,17 @@ def parse_args():
     parser.add_argument("--ordinal_weight", type=float, default=0.08, help="Ordinal distance penalty weight (default 0.08)")
     parser.add_argument("--gaussian_sigma", type=float, default=0.0, help="Gaussian ordinal label smoothing sigma (default 0.0 for crisp decision boundaries; >0 for soft smoothing)")
     parser.add_argument("--consistency_weight", type=float, default=0.10, help="Wind-Category consistency regularization weight (default 0.10)")
-    parser.add_argument("--wind_weight", type=float, default=0.40, help="Normalized wind regression loss weight (default 0.40)")
+    parser.add_argument("--wind_weight", type=float, default=0.20, help="Normalized wind regression loss weight (default 0.20)")
     parser.add_argument("--trend_weight", type=float, default=0.02, help="Trend classification loss weight (default 0.02 to prevent loss inflation)")
     parser.add_argument("--epochs", type=int, default=15, help="Total training epochs (default 15)")
     parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs (default 2)")
-    parser.add_argument("--patience", type=int, default=4, help="Early stopping patience: stop if val accuracy does not improve for N epochs (default 4)")
+    parser.add_argument("--patience", type=int, default=5, help="Early stopping patience: stop if val accuracy does not improve for N epochs (default 5)")
     parser.add_argument("--use_ema", action="store_true", default=False, help="Maintain Exponential Moving Average of weights (decay=0.999) for evaluation")
     parser.add_argument("--use_tta", action="store_true", default=True, help="Use Test-Time Augmentation (TTA) with horizontal reflections during validation")
-    parser.add_argument("--backbone_lr", type=float, default=1.5e-5, help="Spatial backbone learning rate (10x lower to preserve pre-trained features)")
+    parser.add_argument("--backbone_lr", type=float, default=3.5e-5, help="Spatial backbone learning rate (higher for deeper adaptation to satellite eyewalls)")
     parser.add_argument("--lr", type=float, default=3.0e-4, help="Temporal recurrent & heads learning rate")
     parser.add_argument("--weight_decay", type=float, default=2e-4, help="Weight decay for regularization")
-    parser.add_argument("--dropout", type=float, default=0.30, help="Dropout rate to prevent overfitting")
+    parser.add_argument("--dropout", type=float, default=0.10, help="Dropout rate to prevent underfitting while maintaining regularization (default 0.10)")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--save_dir", type=str, default="models/sequence_model", help="Directory to save checkpoints")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint .pt to resume training from")
@@ -121,7 +121,7 @@ def parse_args():
 def train_epoch(
     epoch, epochs, model, dataloader, optimizer, scaler,
     criterion_cat, criterion_wind, criterion_trend, criterion_consistency,
-    device, grad_accum_steps=2, consistency_weight=0.10, wind_weight=0.40, trend_weight=0.05,
+    device, grad_accum_steps=2, consistency_weight=0.10, wind_weight=0.20, trend_weight=0.02,
     model_ema: Optional[ModelEMA] = None
 ):
     model.train()
@@ -198,7 +198,7 @@ def train_epoch(
 def evaluate(
     epoch, epochs, model, dataloader,
     criterion_cat, criterion_wind, criterion_trend, criterion_consistency,
-    device, consistency_weight=0.20, wind_weight=0.40, trend_weight=0.05,
+    device, consistency_weight=0.10, wind_weight=0.20, trend_weight=0.02,
     use_tta: bool = False
 ):
     model.eval()
@@ -273,6 +273,7 @@ def main():
         print("[DRY-RUN] Initializing synthetic 4-frame cyclone sequences...")
         train_ds = CycloneSequenceDataset(seq_length=args.seq_length, frame_step=args.frame_step, img_size=args.img_size, mock_num_samples=32, is_train=True)
         val_ds = CycloneSequenceDataset(seq_length=args.seq_length, frame_step=args.frame_step, img_size=args.img_size, mock_num_samples=16, is_train=False)
+        args.num_workers = 0
         epochs = 2
     else:
         full_ds = CycloneSequenceDataset(
@@ -339,7 +340,8 @@ def main():
         num_classes=5,
         temporal_engine=args.temporal_engine,
         hidden_dim=args.hidden_dim,
-        seq_length=args.seq_length
+        seq_length=args.seq_length,
+        dropout=args.dropout
     ).to(device)
 
     # 3. Loss & Optimizer Setup
@@ -473,6 +475,11 @@ def main():
             "train_loss": tr_loss, "train_acc": tr_acc, "train_mae": tr_mae,
             "val_loss": val_loss, "val_acc": val_acc, "val_mae": val_mae
         })
+        try:
+            with open(save_path / "training_history.json", "w") as f:
+                json.dump(history, f, indent=2)
+        except Exception:
+            pass
 
         if val_acc > best_val_acc and not args.dry_run:
             best_val_acc = val_acc
@@ -511,7 +518,11 @@ def main():
 
     if args.dry_run:
         print("[DRY-RUN COMPLETE] Pipeline verified end-to-end! Ready for full training.")
-        os._exit(0)
+        del train_loader, val_loader, model, optimizer
+        gc.collect()
+        if "cuda" in device.type:
+            torch.cuda.empty_cache()
+        return
     elif args.eval_after_train:
         print("\n" + "=" * 64)
         print(" Running Post-Training Evaluation Suite on Validation Set...")
@@ -523,7 +534,11 @@ def main():
             print(f"Loaded best checkpoint from {best_ckpt_file} for evaluation.")
         run_sequence_evaluation(model, val_loader, device, save_path, use_tta=args.use_tta)
 
-    os._exit(0)
+    del train_loader, val_loader, model, optimizer
+    gc.collect()
+    if "cuda" in device.type:
+        torch.cuda.empty_cache()
+    return
 
 
 if __name__ == "__main__":
