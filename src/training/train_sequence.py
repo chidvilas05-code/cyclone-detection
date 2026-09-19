@@ -404,9 +404,9 @@ def main():
             print(f"[Fine-Tune] Loaded weights successfully! Starting {args.epochs} gentle fine-tuning epochs: Epoch {start_epoch} -> Epoch {epochs} (Benchmark to beat: {best_val_acc*100:.2f}%)")
         elif "epoch" in ckpt:
             start_epoch = int(ckpt["epoch"]) + 1
-            if start_epoch > epochs:
-                epochs = max(epochs, start_epoch + 4)
-                print(f"[Resume] Automatically extending total epochs to {epochs} to continue training.")
+            if epochs < start_epoch:
+                print(f"[Resume] Target epochs was <= checkpoint epoch ({ckpt['epoch']}). Setting total epochs to {start_epoch} to run this single remaining epoch.")
+                epochs = start_epoch
             print(f"[Resume] Successfully resumed! Continuing from Epoch {start_epoch} to {epochs} (Previous Best Val Acc: {best_val_acc*100:.2f}%)")
         if "optimizer_state_dict" in ckpt and not args.finetune:
             try:
