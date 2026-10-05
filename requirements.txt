@@ -24,3 +24,4 @@ plotly>=5.20.0
 # Utilities
 pyyaml>=6.0.1
 tqdm>=4.66.2
+earthengine-api>=1.7.46

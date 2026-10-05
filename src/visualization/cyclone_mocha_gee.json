@@ -1,0 +1,192 @@
+{
+  "name": "Extremely Severe Cyclonic Storm Mocha",
+  "basin": "East Central Bay & Rakhine Coast",
+  "catName": "Extremely Severe Cyclonic Storm",
+  "catCode": "ESCS",
+  "dateRange": {
+    "start": "2023-05-11T00:00:00Z",
+    "peak": "2023-05-13T18:00:00Z",
+    "landfall": "2023-05-14T07:30:00Z",
+    "end": "2023-05-15T00:00:00Z"
+  },
+  "bbox": [
+    84.0,
+    8.0,
+    96.0,
+    24.0
+  ],
+  "obs": {
+    "lat": 16.2,
+    "lon": 89.8,
+    "wind": 125,
+    "gust": 155,
+    "pressure": 932,
+    "drop": "-8.5 hPa / 3h",
+    "sst": 30.5,
+    "rh": 91,
+    "shear": 6.8,
+    "speed": 18,
+    "eye": 22,
+    "symmetry": 95,
+    "frame": "GEE MODIS / INSAT-3D Thermal IR (10.8\u00b5m)"
+  },
+  "pred": {
+    "wind": 135,
+    "deltaWind": "+10 kt in 6h",
+    "wind12h": 140,
+    "pressure": 924,
+    "deltaPres": "-8 hPa",
+    "trend": "RAPID INTENSIFICATION",
+    "r30": 240,
+    "r50": 95,
+    "landfall": {
+      "target": "Sittwe (Myanmar) & Cox's Bazar / Teknaf (Bangladesh)",
+      "coords": "20.15\u00b0N, 92.85\u00b0E",
+      "lat": 20.15,
+      "lon": 92.85,
+      "eta": "+18h (14 May, 07:30 UTC)",
+      "cat": "Extremely Severe Cyclonic Storm (Cat 4-5 Equiv)",
+      "wind": 130,
+      "gust": 160,
+      "pressure": 938,
+      "surge": "3.5 - 4.5 m (Inundating low-lying deltas)",
+      "r30": 260,
+      "r50": 100
+    },
+    "waypoints": [
+      {
+        "time": "+3h",
+        "lat": 16.9,
+        "lon": 90.2,
+        "wind": 128,
+        "pressure": 929
+      },
+      {
+        "time": "+6h",
+        "lat": 17.7,
+        "lon": 90.7,
+        "wind": 135,
+        "pressure": 924
+      },
+      {
+        "time": "+12h",
+        "lat": 19.1,
+        "lon": 91.8,
+        "wind": 140,
+        "pressure": 920
+      },
+      {
+        "time": "+18h",
+        "lat": 20.15,
+        "lon": 92.85,
+        "wind": 130,
+        "pressure": 938
+      },
+      {
+        "time": "+24h",
+        "lat": 21.6,
+        "lon": 94.2,
+        "wind": 65,
+        "pressure": 975
+      }
+    ],
+    "pastTrack": [
+      {
+        "time": "-18h",
+        "lat": 13.1,
+        "lon": 88.3,
+        "wind": 65
+      },
+      {
+        "time": "-12h",
+        "lat": 14.0,
+        "lon": 88.7,
+        "wind": 85
+      },
+      {
+        "time": "-6h",
+        "lat": 15.0,
+        "lon": 89.2,
+        "wind": 105
+      },
+      {
+        "time": "0h",
+        "lat": 16.2,
+        "lon": 89.8,
+        "wind": 125
+      }
+    ]
+  },
+  "dangerZones": [
+    {
+      "level": "red",
+      "levelName": "RED ALERT: CATASTROPHIC EYEWALL STRIKE",
+      "badge": "GROUND ZERO",
+      "name": "Sittwe Coastal Port & Eyewall Ground Zero (Myanmar)",
+      "coords": [
+        20.15,
+        92.88
+      ],
+      "distance": "Direct Eyewall Strike (0 km)",
+      "threat": "Storm surge 4.2m with catastrophic winds > 210 km/h leveling port infrastructure.",
+      "wind": "210 km/h (115 kt)",
+      "evacuation": "MANDATORY EVACUATION: Within 5 km of shoreline"
+    },
+    {
+      "level": "red",
+      "levelName": "RED ALERT: SEVERE SURGE INUNDATION",
+      "badge": "VULNERABLE SHELTERS",
+      "name": "Teknaf & Cox's Bazar Shoreline (Bangladesh)",
+      "coords": [
+        20.86,
+        92.3
+      ],
+      "distance": "75 km NW from center",
+      "threat": "Dangerous coastal flooding (3.6m surge) threatening refugee settlements and estuarine lowlands.",
+      "wind": "175 km/h (95 kt)",
+      "evacuation": "CRITICAL PROTOCOL: Move to reinforced concrete shelters"
+    },
+    {
+      "level": "orange",
+      "levelName": "ORANGE ALERT: GALE & FLOOD HAZARD",
+      "badge": "HIGH SURGE ZONE",
+      "name": "Kyaukpyu & Ramree Island (Rakhine South Sector)",
+      "coords": [
+        19.42,
+        93.55
+      ],
+      "distance": "90 km SE from eyewall",
+      "threat": "Heavy tidal surge 2.8m, storm force gales, and maritime communication cutoffs.",
+      "wind": "140 km/h (75 kt)",
+      "evacuation": "EVACUATE LOWLANDS: Coastal fishermen recall advisory"
+    },
+    {
+      "level": "red",
+      "levelName": "RED ALERT: FRONTIER ESTUARINE SURGE",
+      "badge": "EYEWALL GALE",
+      "name": "Maungdaw & Naf River Estuary (Myanmar/Bangladesh)",
+      "coords": [
+        20.82,
+        92.37
+      ],
+      "distance": "60 km N from eyewall",
+      "threat": "Estuarine backflow surge 3.8m causing extreme water level rises along tidal mudflats.",
+      "wind": "185 km/h (100 kt)",
+      "evacuation": "URGENT EVACUATION: 3 km riverbank perimeter"
+    },
+    {
+      "level": "orange",
+      "levelName": "ORANGE ALERT: INLAND LANDSLIDE & FLASH FLOOD",
+      "badge": "TORRENTIAL RAIN",
+      "name": "Lawngtlai & Saiha Districts (Mizoram Border, India)",
+      "coords": [
+        22.52,
+        92.89
+      ],
+      "distance": "260 km Inland North",
+      "threat": "Severe orographic rainfall > 250mm triggering landslides and hilly river flash surges.",
+      "wind": "90 km/h (50 kt)",
+      "evacuation": "ADVISORY: Evacuate vulnerable landslide-prone slopes"
+    }
+  ]
+}

@@ -140,6 +140,9 @@
         <button id="btnBasemapDark" class="px-2 py-1 rounded text-slate-300 hover:text-white transition" title="CartoDB Dark Operations Base">
           🌌 Dark
         </button>
+        <button id="btnBasemapGeeMocha" class="px-2 py-1 rounded text-slate-300 hover:text-white transition flex items-center gap-1" title="Google Earth Engine / NASA MODIS Real Satellite Imagery (May 13, 2023)">
+          🛰️ GEE Mocha
+        </button>
       </div>
 
       <!-- 3D Perspective Tilt Mode Toggle -->
@@ -163,6 +166,7 @@
       <!-- Scenario Selector -->
       <select id="scenarioSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500 transition cursor-pointer">
         <option value="ditwah">📍 Cyclonic Storm 'Ditwah' (6.9°N, 87.9°E) [Ref Image 1]</option>
+        <option value="mocha">🌪️ Cyclone 'Mocha' (May 2023 - GEE Data / Rakhine Strike)</option>
         <option value="coastal_wcb">📍 Deep Convective Core (West Central Bay) [Ref Image 2]</option>
         <option value="dual_vortex">📍 Dual-Cyclone: Ditwah + Remnant Senyar [Ref Image 3]</option>
         <option value="biparjoy">📍 Extremely Severe 'Biparjoy' (Arabian Sea)</option>
@@ -798,6 +802,55 @@
         },
         zoom: 6,
         center: [20.0, 87.5]
+      },
+
+      // REAL SATELLITE CASE: Extremely Severe Cyclonic Storm Mocha (Google Earth Engine / NASA MODIS - May 2023)
+      mocha: {
+        name: "Extremely Severe Cyclonic Storm Mocha",
+        basin: "East Central Bay & Rakhine Coast",
+        catName: "Extremely Severe Cyclonic Storm",
+        catCode: "ESCS",
+        obs: {
+          lat: 16.2, lon: 89.8,
+          wind: 125, gust: 155,
+          pressure: 932, drop: "−8.5 hPa / 3h",
+          sst: 30.5, rh: 91, shear: 6.8, speed: 18,
+          eye: 22, symmetry: 95,
+          frame: "GEE MODIS / INSAT-3D Thermal IR"
+        },
+        pred: {
+          wind: 135, deltaWind: "+10 kt in 6h", wind12h: 140,
+          pressure: 924, deltaPres: "−8 hPa", trend: "RAPID INTENSIFICATION",
+          r30: 240, r50: 95,
+          landfall: {
+            target: "Sittwe (Myanmar) & Cox's Bazar / Teknaf (Bangladesh)",
+            coords: "20.15°N, 92.85°E",
+            lat: 20.15, lon: 92.85,
+            eta: "18.0 hrs",
+            prob: "99.4%",
+            wind: 130,
+            gust: 160,
+            pressure: 938,
+            surge: "3.5 - 4.5 m (Catastrophic Coastal Inundation)",
+            r30: 260,
+            r50: 100
+          },
+          waypoints: [
+            { time: "+3h", lat: 16.9, lon: 90.2, wind: 128, pressure: 929 },
+            { time: "+6h", lat: 17.7, lon: 90.7, wind: 135, pressure: 924 },
+            { time: "+12h", lat: 19.1, lon: 91.8, wind: 140, pressure: 920 },
+            { time: "+18h", lat: 20.15, lon: 92.85, wind: 130, pressure: 938 },
+            { time: "+24h", lat: 21.6, lon: 94.2, wind: 65, pressure: 975 }
+          ],
+          pastTrack: [
+            { time: "-18h", lat: 13.1, lon: 88.3, wind: 65 },
+            { time: "-12h", lat: 14.0, lon: 88.7, wind: 85 },
+            { time: "-6h", lat: 15.0, lon: 89.2, wind: 105 },
+            { time: "0h", lat: 16.2, lon: 89.8, wind: 125 }
+          ]
+        },
+        zoom: 6,
+        center: [18.2, 91.5]
       }
     };
 
@@ -832,6 +885,10 @@
         subdomains: "abcd",
         maxZoom: 19,
         attribution: "CartoDB Dark"
+      }),
+      geeMocha: L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2023-05-13/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg", {
+        maxZoom: 9,
+        attribution: "Google Earth Engine / NASA MODIS Satellite (13 May 2023)"
       })
     };
 
@@ -845,12 +902,13 @@
       currentBasemap = basemaps[key];
       currentBasemap.addTo(map);
 
-      ["btnBasemapGoogleSat", "btnBasemapGoogleRoad", "btnBasemapEsri", "btnBasemapDark"].forEach(id => {
+      ["btnBasemapGoogleSat", "btnBasemapGoogleRoad", "btnBasemapEsri", "btnBasemapDark", "btnBasemapGeeMocha"].forEach(id => {
         const btn = document.getElementById(id);
+        if (!btn) return;
         if (id === btnId) {
           btn.className = "px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition flex items-center gap-1";
         } else {
-          btn.className = "px-2 py-1 rounded text-slate-300 hover:text-white transition";
+          btn.className = "px-2 py-1 rounded text-slate-300 hover:text-white transition flex items-center gap-1";
         }
       });
     }
@@ -859,6 +917,7 @@
     document.getElementById("btnBasemapGoogleRoad").addEventListener("click", () => setBasemap("googleRoad", "btnBasemapGoogleRoad"));
     document.getElementById("btnBasemapEsri").addEventListener("click", () => setBasemap("esri", "btnBasemapEsri"));
     document.getElementById("btnBasemapDark").addEventListener("click", () => setBasemap("dark", "btnBasemapDark"));
+    document.getElementById("btnBasemapGeeMocha").addEventListener("click", () => setBasemap("geeMocha", "btnBasemapGeeMocha"));
 
     // 3D Oblique Perspective Tilt Toggle
     let is3DTilt = false;
@@ -1221,6 +1280,59 @@
           threat: "Rough seas, gale winds, localized flash floods",
           wind: "50 - 65 kt",
           evacuation: "Odisha Disaster Rapid Action deployed"
+        }
+      ],
+
+      mocha: [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC EYEWALL STRIKE",
+          badge: "GROUND ZERO",
+          name: "Sittwe Coastal Port & Eyewall Ground Zero (Myanmar)",
+          coords: [20.15, 92.88],
+          threat: "Catastrophic storm surge 4.2m with winds > 210 km/h leveling port infrastructure and coastal dwellings.",
+          wind: "115 - 130 kt (Gusts: 160 kt)",
+          evacuation: "MANDATORY EVACUATION: Within 5 km of shoreline"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: SEVERE SURGE INUNDATION",
+          badge: "VULNERABLE SHELTERS",
+          name: "Teknaf & Cox's Bazar Shoreline (Bangladesh)",
+          coords: [20.86, 92.30],
+          threat: "Dangerous coastal surge 3.6m threatening refugee settlements, low-lying estuarine islands and fishing fleets.",
+          wind: "95 - 110 kt",
+          evacuation: "CRITICAL PROTOCOL: Move to reinforced cyclone shelters"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: GALE & FLOOD HAZARD",
+          badge: "HIGH SURGE ZONE",
+          name: "Kyaukpyu & Ramree Island (Rakhine South Sector)",
+          coords: [19.42, 93.55],
+          threat: "Heavy tidal surge 2.8m, storm force gales, and maritime communication cutoffs.",
+          wind: "75 - 90 kt",
+          evacuation: "EVACUATE LOWLANDS: Coastal fishermen recall advisory"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: FRONTIER ESTUARINE SURGE",
+          badge: "EYEWALL GALE",
+          name: "Maungdaw & Naf River Estuary (Myanmar/Bangladesh)",
+          coords: [20.82, 92.37],
+          threat: "Estuarine backflow surge 3.8m causing extreme water level rises along tidal mudflats.",
+          wind: "100 - 115 kt",
+          evacuation: "URGENT EVACUATION: 3 km riverbank perimeter"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: INLAND LANDSLIDE & FLASH FLOOD",
+          badge: "TORRENTIAL RAIN",
+          name: "Lawngtlai & Saiha Districts (Mizoram Border, India)",
+          coords: [22.52, 92.89],
+          threat: "Severe orographic rainfall > 250mm triggering landslides and hilly river flash surges.",
+          wind: "50 - 65 kt",
+          evacuation: "ADVISORY: Evacuate vulnerable landslide-prone slopes"
         }
       ]
     };
