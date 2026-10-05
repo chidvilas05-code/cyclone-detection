@@ -156,7 +156,7 @@ class WindCategoryConsistencyLoss(nn.Module):
 
         # Soft Gaussian distribution over classes based on predicted wind speed
         diff = (wind - self.centers.unsqueeze(0)) / (self.sigmas.unsqueeze(0) + 1e-6)  # (B, 5)
-        gauss_logits = -0.5 * (diff ** 2)  # (B, 5)
+        gauss_logits = (-0.5 * (diff ** 2)).clamp(min=-50.0, max=0.0)  # (B, 5) numerically safe clamp
         soft_targets = F.softmax(gauss_logits, dim=-1)  # (B, 5)
 
         # KL-Divergence between categorical log-probs and soft wind target distribution
@@ -171,5 +171,30 @@ class WindCategoryConsistencyLoss(nn.Module):
 
         total_consistency = kl_loss + self.expected_wind_weight * wind_diff_loss
         return total_consistency
+
+
+class AsymmetricWindLoss(nn.Module):
+    """
+    Safety-Critical Asymmetric Wind Regression Loss.
+    Heavily penalizes underestimating dangerous cyclones (Category 3, 4, 5 / >= 64 kt).
+    In disaster management, underestimating a Super Cyclone is catastrophic.
+    """
+    def __init__(self, severe_thresh_kt: float = 64.0, under_penalty: float = 2.5):
+        super().__init__()
+        self.severe_thresh_norm = (severe_thresh_kt - 48.4) / 23.2
+        self.under_penalty = under_penalty
+
+    def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """
+        pred: (B,) normalized predicted wind speed
+        target: (B,) normalized ground truth wind speed
+        """
+        diff = pred - target
+        base_loss = F.smooth_l1_loss(pred, target, reduction="none")
+        # Penalty condition: true storm is severe (>=64 kt) AND prediction is an underestimate (diff < 0)
+        underestimate_mask = (target >= self.severe_thresh_norm) & (diff < 0.0)
+        weights = torch.where(underestimate_mask, self.under_penalty, 1.0)
+        return (base_loss * weights).mean()
+
 
 

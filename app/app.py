@@ -135,17 +135,19 @@ st.sidebar.title("Operational Controls")
 app_mode = st.sidebar.radio(
     "Select Operating Modality:",
     [
+        "🌐 3D Cyclone Movement & Sensory Simulation",
         "Multimodal (Satellite + Sensory)",
         "Satellite Imagery Only",
         "Atmospheric Sensory Only",
         "🎥 Video Simulation (Time-Lapse Tracking)"
-    ]
+    ],
+    index=0
 )
 
 sensor_dict = {}
 df_sensory_csv = None
 
-if app_mode != "🎥 Video Simulation (Time-Lapse Tracking)":
+if app_mode not in ["🎥 Video Simulation (Time-Lapse Tracking)", "🌐 3D Cyclone Movement & Sensory Simulation"]:
     st.sidebar.markdown("---")
     st.sidebar.subheader("Atmospheric Sensor Inputs")
 
@@ -249,6 +251,24 @@ st.markdown(
     '<div class="sub-header">Multi-Source Satellite Pattern Identification • Explainable Grad-CAM • Atmospheric Sensor Fusion</div>',
     unsafe_allow_html=True
 )
+
+if app_mode == "🌐 3D Cyclone Movement & Sensory Simulation":
+    st.markdown("### 🌐 3D Geospatial Cyclone Simulation & Multi-Task Forecaster")
+    st.write(
+        "Interactive 3D Earth map simulating random and historical cyclone occurrences across global ocean basins. "
+        "The right operational panel is divided into **Live Sensory Data** (top) and **Predicted Model Data** (bottom), "
+        "with the **predicted movement of the cyclone highlighted as a red dotted line**."
+    )
+
+    sim_html_path = Path("src/visualization/cyclone_3d_simulation.html")
+    if sim_html_path.exists():
+        with open(sim_html_path, "r", encoding="utf-8") as f:
+            html_code = f.read()
+        import streamlit.components.v1 as components
+        components.html(html_code, height=920, scrolling=False)
+    else:
+        st.error(f"Simulation file not found at `{sim_html_path}`")
+    st.stop()
 
 if app_mode == "🎥 Video Simulation (Time-Lapse Tracking)":
     st.markdown("### 🎥 Real-Time Satellite Cyclone Video Simulation & Tracking")
