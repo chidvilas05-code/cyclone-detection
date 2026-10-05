@@ -3,45 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Geospatial Cyclone Simulation & Multi-Task Forecaster</title>
+  <title>Real-World Cyclone 3D Simulation & AI Forecaster</title>
+  
+  <!-- Tailwind CSS -->
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  
+  <!-- Leaflet CSS & JS for Real-World Global Cartography -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
   <style>
-    @keyframes pulse-ring {
-      0% { transform: scale(0.85); opacity: 1; }
-      100% { transform: scale(1.8); opacity: 0; }
+    /* 3D Perspective Tilt for the Map Container */
+    .map-3d-viewport {
+      perspective: 1200px;
+      perspective-origin: 50% 70%;
+      overflow: hidden;
     }
+    .map-3d-tilt {
+      transform: rotateX(28deg) scale(1.08);
+      transform-origin: 50% 60%;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9);
+    }
+    .map-flat {
+      transform: rotateX(0deg) scale(1);
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Red Dotted Line Animation & Glow */
+    .red-dotted-track {
+      stroke-dasharray: 10, 10;
+      animation: dash-flow 1.5s linear infinite;
+      filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.95)) drop-shadow(0 0 16px rgba(239, 68, 68, 0.7));
+    }
+    @keyframes dash-flow {
+      to {
+        stroke-dashoffset: -20;
+      }
+    }
+
+    /* Radar sweep animation */
     @keyframes radar-sweep {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-    @keyframes live-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    @keyframes glow-red {
-      0%, 100% { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9)); }
-      50% { filter: drop-shadow(0 0 14px rgba(239, 68, 68, 1)); }
-    }
-    .pulse-beacon {
-      animation: pulse-ring 2.2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
-    }
     .radar-beam {
-      animation: radar-sweep 5s linear infinite;
+      animation: radar-sweep 4.5s linear infinite;
       transform-origin: center center;
+    }
+
+    /* Live telemetry pulsing dot */
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.8); }
     }
     .live-dot {
       animation: live-pulse 1.4s infinite ease-in-out;
     }
-    .red-dotted-glow {
-      animation: glow-red 2s infinite ease-in-out;
+
+    /* Eye target callout pulse */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.85); opacity: 1; }
+      100% { transform: scale(1.9); opacity: 0; }
     }
+    .eye-pulse-ring {
+      animation: pulse-ring 2.2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+    }
+
+    /* Leaflet custom controls styling */
+    .leaflet-control-zoom {
+      border: 1px solid #334155 !important;
+      border-radius: 8px !important;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+    }
+    .leaflet-control-zoom a {
+      background-color: #0f172a !important;
+      color: #94a3b8 !important;
+      border-bottom: 1px solid #1e293b !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background-color: #1e293b !important;
+      color: #38bdf8 !important;
+    }
+
     /* Custom clean scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: rgba(10, 15, 30, 0.8);
+      background: rgba(15, 23, 42, 0.8);
     }
     ::-webkit-scrollbar-thumb {
       background: rgba(56, 189, 248, 0.35);
@@ -62,64 +114,76 @@
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-sm font-bold tracking-wide text-white uppercase">Cyclone 3D Geospatial Simulation & Multi-Task Forecaster</h1>
+          <h1 class="text-sm font-bold tracking-wide text-white uppercase">Cyclone Geospatial Simulation & Multi-Task Forecaster</h1>
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30 flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span> REAL SATELLITE CARTOGRAPHY
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span> REAL GOOGLE SATELLITE MAP
           </span>
         </div>
-        <p class="text-[11px] text-slate-400">INSAT-3D Style Real-World Map Grids • State/District Borders • Explainable Grad-CAM Convective Attention</p>
+        <p class="text-[11px] text-slate-400">High-Resolution Satellite Cartography • INSAT-3D Style Grid • AI Explainable Grad-CAM Heatmap</p>
       </div>
     </div>
 
     <!-- Top Controls: Mode Toggles & Scenarios -->
     <div class="flex items-center gap-2.5">
       
-      <!-- Visual Imagery Theme -->
+      <!-- Basemap Switcher -->
       <div class="flex items-center bg-slate-800/90 rounded-lg p-0.5 border border-slate-700 text-xs">
-        <button id="btnThemeIR" class="px-2.5 py-1 rounded font-semibold bg-slate-700 text-white transition" title="Monochromatic Infrared (Image 1 & 3 reference style)">
-          🛰️ Mono IR (10.8µm)
+        <button id="btnBasemapGoogleSat" class="px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition flex items-center gap-1" title="Google Maps Satellite Hybrid (Real Cartography)">
+          🛰️ Google Satellite
         </button>
-        <button id="btnThemeRGB" class="px-2.5 py-1 rounded font-medium text-slate-300 hover:text-white transition" title="Enhanced False-Color Thermal (Image 2 reference style)">
-          🌈 Enhanced RGB
+        <button id="btnBasemapGoogleRoad" class="px-2 py-1 rounded text-slate-300 hover:text-white transition" title="Google Maps Terrain / Standard">
+          🗺️ Google Maps
+        </button>
+        <button id="btnBasemapEsri" class="px-2 py-1 rounded text-slate-300 hover:text-white transition" title="ESRI High-Res World Imagery">
+          🌍 ESRI Sat
+        </button>
+        <button id="btnBasemapDark" class="px-2 py-1 rounded text-slate-300 hover:text-white transition" title="CartoDB Dark Operations Base">
+          🌌 Dark
         </button>
       </div>
 
+      <!-- 3D Perspective Tilt Mode Toggle -->
+      <button id="btnToggle3D" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/40" title="Toggle 3D Oblique Satellite Perspective View">
+        <span>📐</span>
+        <span id="label3D">3D Tilt: OFF</span>
+      </button>
+
       <!-- Grad-CAM Toggle Button -->
-      <button id="btnToggleGradCAM" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-rose-500/50 text-rose-400 hover:bg-rose-950/40">
+      <button id="btnToggleGradCAM" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-rose-950/60 border border-rose-500 text-rose-400 hover:bg-rose-900/50 shadow-sm shadow-rose-500/30" title="Toggle Explainable Deep Convective Heatmap">
         <span id="gradcamIcon">🔥</span>
         <span id="gradcamLabel">With Grad-CAM: ON</span>
       </button>
 
       <!-- Scenario Selector -->
       <select id="scenarioSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500 transition cursor-pointer">
-        <option value="ditwah">📍 Cyclonic Storm 'Ditwah' (6.9°N, 87.9°E) [Reference Image 1]</option>
-        <option value="coastal_wcb">📍 Deep Convective Core (West Central Bay) [Reference Image 2]</option>
-        <option value="dual_vortex">📍 Dual-Cyclone: Ditwah + Remnant Senyar [Reference Image 3]</option>
+        <option value="ditwah">📍 Cyclonic Storm 'Ditwah' (6.9°N, 87.9°E) [Ref Image 1]</option>
+        <option value="coastal_wcb">📍 Deep Convective Core (West Central Bay) [Ref Image 2]</option>
+        <option value="dual_vortex">📍 Dual-Cyclone: Ditwah + Remnant Senyar [Ref Image 3]</option>
         <option value="biparjoy">📍 Extremely Severe 'Biparjoy' (Arabian Sea)</option>
         <option value="amphan">📍 Super Cyclone 'Amphan' (North Bay of Bengal)</option>
         <option value="random">🎲 Simulate New Random Occurrence</option>
       </select>
 
-      <button id="btnResetView" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition" title="Reset View">
-        🧭 Reset 3D
+      <button id="btnResetView" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition" title="Center on Active Storm">
+        🧭 Center Eye
       </button>
     </div>
   </header>
 
-  <!-- Main Work Area: 3D Map (Left) + Split Panel (Right) -->
+  <!-- Main Work Area: Real Global Map (Left) + Split Panel (Right) -->
   <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- LEFT: 3D Real-World Geospatial Map Canvas Container -->
-    <div class="flex-1 relative bg-black overflow-hidden flex items-center justify-center" id="mapContainer">
+    <!-- LEFT: Real Global Map Container (Leaflet with Google Satellite Tiles) -->
+    <div class="flex-1 relative bg-slate-950 overflow-hidden map-3d-viewport" id="mapWrapper">
       
-      <!-- Native 3D / Geospatial Canvas -->
-      <canvas id="globeCanvas" class="block w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+      <!-- Leaflet Map Container -->
+      <div id="map" class="w-full h-full map-flat"></div>
 
-      <!-- Top Overlay Legend & Target Callout matching Reference Images -->
-      <div class="absolute top-3 left-3 flex flex-col gap-2 z-10 pointer-events-none">
+      <!-- Top Overlay Target Banner & Legend (Matching Reference Images 1, 2, 3) -->
+      <div class="absolute top-3 left-3 flex flex-col gap-2 z-[1000] pointer-events-none">
         
-        <!-- Live Storm Reference Target Banner (Styled exactly like Reference Images 1 & 3) -->
-        <div id="targetCalloutCard" class="bg-slate-950/90 border-2 border-red-600 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[220px]">
+        <!-- Live Storm Target Banner (Styled exactly like Reference Images 1 & 3) -->
+        <div id="targetCalloutCard" class="bg-slate-950/90 border-2 border-red-600 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur">
           <div class="flex items-center justify-between gap-3">
             <span id="targetStormName" class="font-mono font-bold text-xs text-red-500 uppercase tracking-wider">Cyclonic Storm Ditwah</span>
             <span id="targetStormBadge" class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-red-600/30 text-red-300 border border-red-500">CS</span>
@@ -131,7 +195,7 @@
         </div>
 
         <!-- Optional Second Target Card for Dual System Mode (Matching Image 3 yellow target) -->
-        <div id="targetSecondCard" class="bg-slate-950/90 border-2 border-yellow-500 rounded-lg p-2 shadow-2xl pointer-events-auto min-w-[220px] hidden">
+        <div id="targetSecondCard" class="bg-slate-950/90 border-2 border-yellow-500 rounded-lg p-2 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur hidden">
           <div class="flex items-center justify-between gap-3">
             <span class="font-mono font-bold text-[11px] text-yellow-400 uppercase tracking-wider">Depression (Remnant Senyar)</span>
             <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-yellow-600/30 text-yellow-300 border border-yellow-500">DEP</span>
@@ -143,25 +207,25 @@
         </div>
 
         <!-- Map Layer Toggles & Legend -->
-        <div class="bg-slate-900/85 border border-slate-800/90 backdrop-blur rounded-xl p-2.5 shadow-xl pointer-events-auto text-[11px] flex flex-col gap-1.5 max-w-[260px]">
+        <div class="bg-slate-900/90 border border-slate-800/90 backdrop-blur rounded-xl p-2.5 shadow-2xl pointer-events-auto text-[11px] flex flex-col gap-1.5 max-w-[280px]">
           <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center justify-between">
-            <span>Map Layers & Legend</span>
+            <span>Layers & Legend</span>
             <span class="text-cyan-400 font-mono text-[9px]">INSAT/IMD GRID</span>
           </div>
 
           <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-            <input type="checkbox" id="chkStateBorders" checked class="rounded border-slate-700 bg-slate-800 text-cyan-500">
-            <span>Geopolitical State Boundaries (White)</span>
-          </label>
-
-          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-            <input type="checkbox" id="chkLatLonGrid" checked class="rounded border-slate-700 bg-slate-800 text-cyan-500">
-            <span>Lat / Lon Graticule Lines (Dashed)</span>
-          </label>
-
-          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
             <input type="checkbox" id="chkQuadrants" checked class="rounded border-slate-700 bg-slate-800 text-pink-500">
-            <span>IMD Warning Quadrants (WCB/ECB/SWB/SEB)</span>
+            <span>IMD Warning Sectors (WCB/ECB/SWB/SEB)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+            <input type="checkbox" id="chkRadii" checked class="rounded border-slate-700 bg-slate-800 text-amber-500">
+            <span>Gale Wind Radii (R30 & R50 Danger)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+            <input type="checkbox" id="chkCone" checked class="rounded border-slate-700 bg-slate-800 text-red-500">
+            <span>Forecast Cone of Uncertainty</span>
           </label>
 
           <div class="h-px bg-slate-800 my-0.5"></div>
@@ -173,23 +237,15 @@
           </div>
           <div class="flex items-center gap-2">
             <div class="w-5 h-0.5 border-t-2 border-dashed border-red-500 shadow-sm shadow-red-500/80"></div>
-            <span class="text-red-400 font-semibold text-[10px] flex items-center gap-1">
+            <span class="text-red-400 font-bold text-[10px] flex items-center gap-1">
               <span>●</span> Predicted Movement (Red Dotted Line)
             </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-3.5 h-3.5 rounded-full border border-yellow-400/80 bg-yellow-400/20"></div>
-            <span class="text-slate-300 text-[10px]">Gale Danger Radius (R30)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-3.5 h-3.5 rounded-full border border-red-500/80 bg-red-500/30"></div>
-            <span class="text-slate-300 text-[10px]">Destructive Eyewall Radius (R50)</span>
           </div>
         </div>
       </div>
 
-      <!-- Bottom Floating Controls: 3D Camera & Playback -->
-      <div class="absolute bottom-4 left-4 z-20 flex items-center gap-2 pointer-events-auto bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-2 rounded-xl shadow-2xl">
+      <!-- Bottom Floating Controls: Playback & Timeline -->
+      <div class="absolute bottom-4 left-4 z-[1000] flex items-center gap-2 pointer-events-auto bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-2 rounded-xl shadow-2xl">
         <button id="btnPlay" class="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center text-xs font-bold transition shadow-md shadow-blue-600/30">
           ▶
         </button>
@@ -199,23 +255,15 @@
             <span id="timeStepLabel" class="text-cyan-400 font-bold">LIVE (T=0h)</span>
             <span>+24h Forecast</span>
           </div>
-          <input type="range" id="timeSlider" min="-18" max="24" step="3" value="0" class="w-48 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+          <input type="range" id="timeSlider" min="-18" max="24" step="3" value="0" class="w-52 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
         </div>
-
-        <div class="h-6 w-px bg-slate-800 mx-1"></div>
-
-        <button id="btnZoomIn" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition" title="Zoom In">+</button>
-        <button id="btnZoomOut" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition" title="Zoom Out">−</button>
-        <button id="btnAutoRotate" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700 transition font-medium" title="Toggle Auto-Rotation">
-          🔄 Spin
-        </button>
       </div>
 
       <!-- Active Mode Indicator Tag -->
-      <div class="absolute top-3 right-3 z-10 pointer-events-none">
+      <div class="absolute top-3 right-3 z-[1000] pointer-events-none">
         <div id="gradcamStatusBadge" class="bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-          <span>GRAD-CAM CONVECTIVE ATTENTION ACTIVE</span>
+          <span id="gradcamStatusText">GRAD-CAM CONVECTIVE ATTENTION ACTIVE</span>
         </div>
       </div>
     </div>
@@ -291,13 +339,13 @@
               <span class="text-xs text-orange-400">°C</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
-              <span>Warm tropical waters</span>
+              <span>Warm tropical basin</span>
             </div>
           </div>
 
           <!-- Eye Structure -->
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
-            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Eye Wall Morphology</span>
+            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Eye Wall Diameter</span>
             <div class="flex items-baseline gap-1 mt-0.5">
               <span id="liveEyeVal" class="text-lg font-bold font-mono text-cyan-400">34</span>
               <span class="text-xs text-cyan-400">km</span>
@@ -428,7 +476,7 @@
               <span id="predLandfallProb" class="text-base font-bold font-mono text-red-400">92.4%</span>
               <span class="text-xs text-slate-300">Probability</span>
             </div>
-            <span id="predLandfallTarget" class="text-[10px] text-red-300 block">Tamil Nadu / Andhra Coast</span>
+            <span id="predLandfallTarget" class="text-[10px] text-red-300 block font-semibold">Tamil Nadu / Andhra Coast</span>
           </div>
           <div class="text-right">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Shore Arrival ETA</span>
@@ -444,7 +492,7 @@
               <span class="w-2 h-2 rounded-full bg-red-500 live-dot"></span>
               Predicted Movement Path (Red Dotted Line)
             </span>
-            <span class="text-[9px] font-mono text-slate-400">+6h / +12h / +24h</span>
+            <span class="text-[9px] font-mono text-slate-400">+3h to +24h</span>
           </div>
           
           <div class="overflow-x-auto text-[10px] font-mono flex-1">
@@ -470,7 +518,7 @@
 
   </div>
 
-  <!-- Interactive 3D Geospatial Engine & Real-World Satellite Cartography -->
+  <!-- Interactive Real-World Satellite Map & Cyclone Simulation Engine -->
   <script>
     // =========================================================================
     // 1. Physical Scenario Datasets (Matching Reference Images 1, 2, 3)
@@ -511,7 +559,8 @@
             { time: "0h", lat: 6.9, lon: 87.9, wind: 45 }
           ]
         },
-        camTarget: { lat: 8.0, lon: 86.0 }
+        zoom: 6,
+        center: [8.5, 86.5]
       },
 
       // REFERENCE IMAGE 2: Enhanced False-Color Thermal Deep Convection (WCB Sector)
@@ -549,12 +598,13 @@
             { time: "0h", lat: 14.2, lon: 83.5, wind: 58 }
           ]
         },
-        camTarget: { lat: 15.0, lon: 83.0 }
+        zoom: 6,
+        center: [15.2, 83.0]
       },
 
       // REFERENCE IMAGE 3: Dual-System Interaction (Ditwah + Remnant Senyar)
       dual_vortex: {
-        name: "Dual Cyclone Interaction (Ditwah + Senyar)",
+        name: "Dual Cyclone (Ditwah + Senyar)",
         basin: "Bay of Bengal & Malacca Strait",
         catName: "Multi-Vortex System",
         catCode: "CS+DEP",
@@ -592,71 +642,73 @@
           lat: 3.6, lon: 99.8,
           wind: 25, pressure: 1004
         },
-        camTarget: { lat: 8.5, lon: 92.0 }
+        zoom: 5,
+        center: [6.0, 93.5]
       },
 
       // Arabian Sea Biparjoy
       biparjoy: {
         name: "Extremely Severe Cyclone Biparjoy",
-        basin: "Arabian Sea",
-        catName: "Extremely Severe",
+        basin: "East Central Arabian Sea",
+        catName: "Extremely Severe Cyclonic Storm",
         catCode: "ESCS",
-        confidence: "99.2%",
+        confidence: "99.4%",
         obs: {
-          lat: 19.6, lon: 67.2,
+          lat: 19.8, lon: 66.8,
           wind: 90, gust: 110,
-          pressure: 954, drop: "−4.0 hPa / 3h",
-          sst: 29.5, rh: 82, shear: 10.5, speed: 10,
-          eye: 30, symmetry: 90,
-          frame: "INSAT-3D TIR-1"
+          pressure: 958, drop: "−6.2 hPa / 3h",
+          sst: 31.0, rh: 82, shear: 6.5, speed: 10,
+          eye: 24, symmetry: 95,
+          frame: "INSAT-3D TIR-1 Enhanced"
         },
         pred: {
-          wind: 95, deltaWind: "+5 kt in 6h", wind12h: 92,
-          pressure: 950, deltaPres: "−4 hPa", trend: "STEADY INTENSE",
-          r30: 280, r50: 95,
-          landfallProb: "96.0%", eta: "30.0 hrs", target: "Gujarat / Saurashtra Coast",
+          wind: 95, deltaWind: "+5 kt in 6h", wind12h: 90,
+          pressure: 952, deltaPres: "−6 hPa", trend: "PEAK INTENSITY",
+          r30: 240, r50: 110,
+          landfallProb: "98.9%", eta: "18.0 hrs", target: "Saurashtra & Kutch Coast (Jakhau)",
           waypoints: [
-            { time: "+3h", lat: 20.1, lon: 67.1, wind: 92, pressure: 952 },
-            { time: "+6h", lat: 20.6, lon: 67.2, wind: 95, pressure: 950 },
-            { time: "+9h", lat: 21.2, lon: 67.5, wind: 94, pressure: 951 },
-            { time: "+12h", lat: 21.8, lon: 67.9, wind: 92, pressure: 953 },
-            { time: "+18h", lat: 22.8, lon: 68.4, wind: 85, pressure: 960 },
-            { time: "+24h", lat: 23.5, lon: 68.9, wind: 70, pressure: 975 }
+            { time: "+3h", lat: 20.6, lon: 67.2, wind: 92, pressure: 955 },
+            { time: "+6h", lat: 21.4, lon: 67.7, wind: 95, pressure: 952 },
+            { time: "+9h", lat: 22.1, lon: 68.2, wind: 90, pressure: 958 },
+            { time: "+12h", lat: 22.8, lon: 68.6, wind: 85, pressure: 965 },
+            { time: "+18h", lat: 23.3, lon: 69.0, wind: 70, pressure: 978 },
+            { time: "+24h", lat: 24.1, lon: 69.8, wind: 45, pressure: 992 }
           ],
           pastTrack: [
-            { time: "-18h", lat: 16.8, lon: 67.5, wind: 75 },
-            { time: "-12h", lat: 17.7, lon: 67.4, wind: 80 },
-            { time: "-6h", lat: 18.6, lon: 67.3, wind: 85 },
-            { time: "0h", lat: 19.6, lon: 67.2, wind: 90 }
+            { time: "-18h", lat: 17.2, lon: 66.0, wind: 75 },
+            { time: "-12h", lat: 18.0, lon: 66.2, wind: 80 },
+            { time: "-6h", lat: 18.9, lon: 66.5, wind: 85 },
+            { time: "0h", lat: 19.8, lon: 66.8, wind: 90 }
           ]
         },
-        camTarget: { lat: 20.0, lon: 67.5 }
+        zoom: 6,
+        center: [21.5, 68.0]
       },
 
       // Super Cyclone Amphan
       amphan: {
         name: "Super Cyclone Amphan",
         basin: "North Bay of Bengal",
-        catName: "Super Cyclone",
+        catName: "Super Cyclonic Storm",
         catCode: "SuCS",
         confidence: "99.8%",
         obs: {
           lat: 18.2, lon: 86.9,
           wind: 120, gust: 145,
-          pressure: 922, drop: "−5.5 hPa / 3h",
-          sst: 30.8, rh: 88, shear: 7.5, speed: 17,
-          eye: 24, symmetry: 96,
-          frame: "INSAT-3D RGB Composite"
+          pressure: 925, drop: "−9.0 hPa / 3h",
+          sst: 31.5, rh: 92, shear: 5.0, speed: 22,
+          eye: 18, symmetry: 98,
+          frame: "INSAT-3D Super HD"
         },
         pred: {
-          wind: 128, deltaWind: "+8 kt in 6h", wind12h: 134,
-          pressure: 915, deltaPres: "−7 hPa", trend: "SUPER CYCLONE",
-          r30: 320, r50: 135,
-          landfallProb: "98.5%", eta: "14.5 hrs", target: "Odisha / West Bengal Coast",
+          wind: 130, deltaWind: "+10 kt in 6h", wind12h: 134,
+          pressure: 915, deltaPres: "−10 hPa", trend: "CATASTROPHIC CORE",
+          r30: 290, r50: 140,
+          landfallProb: "99.9%", eta: "14.5 hrs", target: "West Bengal / Bangladesh Coast (Digha)",
           waypoints: [
-            { time: "+3h", lat: 18.8, lon: 87.2, wind: 124, pressure: 918 },
-            { time: "+6h", lat: 19.5, lon: 87.5, wind: 128, pressure: 915 },
-            { time: "+9h", lat: 20.3, lon: 87.9, wind: 131, pressure: 912 },
+            { time: "+3h", lat: 19.1, lon: 87.3, wind: 125, pressure: 920 },
+            { time: "+6h", lat: 20.0, lon: 87.8, wind: 130, pressure: 915 },
+            { time: "+9h", lat: 20.6, lon: 88.0, wind: 132, pressure: 912 },
             { time: "+12h", lat: 21.1, lon: 88.2, wind: 134, pressure: 910 },
             { time: "+18h", lat: 22.0, lon: 88.5, wind: 115, pressure: 935 },
             { time: "+24h", lat: 23.2, lon: 89.1, wind: 75, pressure: 970 }
@@ -668,918 +720,824 @@
             { time: "0h", lat: 18.2, lon: 86.9, wind: 120 }
           ]
         },
-        camTarget: { lat: 19.5, lon: 87.5 }
+        zoom: 6,
+        center: [20.0, 87.5]
       }
     };
 
     // =========================================================================
-    // 2. Real-World India Coastline, States & Maritime Quadrants (Vector Geometry)
+    // 2. Real-World Leaflet Map Setup with Google Satellite & High-Res Basemaps
     // =========================================================================
-    // Real India coastline and internal state boundaries
-    const INDIA_COASTLINE = [
-      [24.0, 68.0], [23.5, 68.3], [22.8, 69.2], [22.4, 70.0], [21.5, 69.5],
-      [20.8, 70.4], [20.9, 71.8], [21.7, 72.3], [21.2, 72.8], [20.0, 72.8],
-      [18.9, 72.8], [17.5, 73.2], [15.5, 73.8], [14.0, 74.5], [12.9, 74.8],
-      [11.5, 75.5], [10.0, 76.2], [8.8, 76.6], [8.1, 77.5], [8.5, 78.1],
-      [9.2, 79.2], [9.8, 79.2], [10.3, 79.8], [11.5, 79.8], [12.0, 79.8],
-      [13.1, 80.3], [14.0, 80.1], [15.5, 80.2], [16.0, 81.0], [16.5, 82.2],
-      [17.3, 83.0], [17.7, 83.3], [18.3, 84.1], [19.3, 85.0], [19.8, 85.8],
-      [20.3, 86.7], [21.5, 87.0], [21.7, 87.5], [21.6, 88.2], [22.0, 89.0]
-    ];
+    const map = L.map("map", {
+      center: [12.0, 85.0],
+      zoom: 5,
+      zoomControl: true,
+      attributionControl: false,
+      worldCopyJump: true
+    });
 
-    const SRI_LANKA = [
-      [9.8, 80.2], [9.2, 80.8], [8.6, 81.2], [7.7, 81.7], [6.9, 81.8],
-      [6.0, 81.0], [5.9, 80.5], [6.2, 80.0], [7.0, 79.8], [8.0, 79.8],
-      [8.6, 79.8], [9.5, 80.0], [9.8, 80.2]
-    ];
+    // Basemap tile layers
+    const basemaps = {
+      // Real Google Satellite Hybrid (satellite imagery + geopolitical labels)
+      googleSat: L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+        subdomains: ["0", "1", "2", "3"],
+        maxZoom: 20,
+        attribution: "Google Satellite"
+      }),
+      // Google Standard Road/Terrain
+      googleRoad: L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+        subdomains: ["0", "1", "2", "3"],
+        maxZoom: 20,
+        attribution: "Google Maps"
+      }),
+      // ESRI High-Resolution World Imagery
+      esri: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "ESRI World Imagery"
+      }),
+      // CartoDB Dark Matter
+      dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        subdomains: "abcd",
+        maxZoom: 19,
+        attribution: "CartoDB Dark"
+      })
+    };
 
-    const BANGLADESH_MYANMAR = [
-      [22.0, 89.0], [22.3, 89.8], [22.5, 90.5], [22.8, 91.2], [22.3, 91.8],
-      [21.5, 92.0], [20.8, 92.4], [20.0, 92.9], [19.0, 93.6], [18.0, 94.2],
-      [16.5, 94.3], [16.0, 95.2], [15.7, 96.2], [16.5, 97.5], [15.0, 97.8],
-      [13.5, 98.2], [11.5, 98.5], [9.8, 98.5]
-    ];
+    // Default to Google Satellite Hybrid
+    let currentBasemap = basemaps.googleSat;
+    currentBasemap.addTo(map);
 
-    const ANDAMAN_NICOBAR = [
-      [[13.3, 93.0], [12.8, 92.8], [12.2, 92.7], [11.6, 92.7], [10.5, 92.5]], // Andaman
-      [[9.2, 92.8], [8.5, 93.5], [7.5, 93.7], [7.0, 93.9]]                    // Nicobar
-    ];
+    // Basemap Switcher Events
+    function setBasemap(key, btnId) {
+      map.removeLayer(currentBasemap);
+      currentBasemap = basemaps[key];
+      currentBasemap.addTo(map);
 
-    // India internal state borders (matching Reference Image 1 & 2)
-    const INDIA_STATE_BORDERS = [
-      // Gujarat - Maharashtra border
-      [[20.2, 72.8], [20.5, 73.5], [21.2, 74.0], [21.8, 74.2]],
-      // Maharashtra - Karnataka - Goa
-      [[15.8, 73.7], [16.0, 74.5], [16.5, 75.5], [17.5, 76.5]],
-      // Karnataka - Kerala
-      [[12.8, 74.9], [12.4, 75.3], [12.0, 75.8], [11.8, 76.3]],
-      // Kerala - Tamil Nadu
-      [[11.8, 76.3], [10.8, 76.7], [9.8, 77.2], [8.8, 77.3], [8.1, 77.5]],
-      // Tamil Nadu - Andhra Pradesh
-      [[13.5, 80.2], [13.2, 79.5], [13.0, 78.5], [12.8, 78.3]],
-      // Andhra Pradesh - Odisha
-      [[19.0, 84.7], [18.8, 84.0], [18.5, 83.2], [18.2, 82.5]],
-      // Odisha - West Bengal
-      [[21.6, 87.2], [22.0, 87.0], [22.5, 86.8]],
-      // Northern borders (Rajasthan, MP, UP, Bihar)
-      [[24.5, 71.0], [26.0, 73.0], [28.0, 75.0], [28.5, 77.0]],
-      [[21.8, 74.2], [22.5, 77.0], [23.5, 81.0], [22.8, 84.0]],
-      [[24.0, 83.0], [25.5, 85.0], [26.0, 88.0]]
-    ];
+      // Update button highlights
+      ["btnBasemapGoogleSat", "btnBasemapGoogleRoad", "btnBasemapEsri", "btnBasemapDark"].forEach(id => {
+        const btn = document.getElementById(id);
+        if (id === btnId) {
+          btn.className = "px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition flex items-center gap-1";
+        } else {
+          btn.className = "px-2 py-1 rounded text-slate-300 hover:text-white transition";
+        }
+      });
+    }
+
+    document.getElementById("btnBasemapGoogleSat").addEventListener("click", () => setBasemap("googleSat", "btnBasemapGoogleSat"));
+    document.getElementById("btnBasemapGoogleRoad").addEventListener("click", () => setBasemap("googleRoad", "btnBasemapGoogleRoad"));
+    document.getElementById("btnBasemapEsri").addEventListener("click", () => setBasemap("esri", "btnBasemapEsri"));
+    document.getElementById("btnBasemapDark").addEventListener("click", () => setBasemap("dark", "btnBasemapDark"));
+
+    // 3D Oblique Perspective Tilt Toggle
+    let is3DTilt = false;
+    const btnToggle3D = document.getElementById("btnToggle3D");
+    const label3D = document.getElementById("label3D");
+    const mapElement = document.getElementById("map");
+
+    btnToggle3D.addEventListener("click", () => {
+      is3DTilt = !is3DTilt;
+      if (is3DTilt) {
+        mapElement.classList.remove("map-flat");
+        mapElement.classList.add("map-3d-tilt");
+        label3D.innerText = "3D Tilt: ON";
+        btnToggle3D.classList.remove("text-cyan-400", "border-cyan-500/50");
+        btnToggle3D.classList.add("text-cyan-300", "bg-cyan-950/80", "border-cyan-400", "shadow-lg", "shadow-cyan-500/20");
+      } else {
+        mapElement.classList.remove("map-3d-tilt");
+        mapElement.classList.add("map-flat");
+        label3D.innerText = "3D Tilt: OFF";
+        btnToggle3D.classList.add("text-cyan-400", "border-cyan-500/50");
+        btnToggle3D.classList.remove("text-cyan-300", "bg-cyan-950/80", "border-cyan-400", "shadow-lg", "shadow-cyan-500/20");
+      }
+      setTimeout(() => map.invalidateSize(), 300);
+    });
+
+    // =========================================================================
+    // 3. Cyclone Layer & Visual Overlays (Canvas + SVG + Markers)
+    // =========================================================================
+    let activeScenarioKey = "ditwah";
+    let activeScenario = SCENARIOS[activeScenarioKey];
+    let showGradCAM = true;
+    let currentTimeStep = 0; // -18 to +24
+    let isPlaying = false;
+    let playInterval = null;
+
+    // Layer groups for map elements
+    const trajectoryLayer = L.layerGroup().addTo(map);
+    const dangerRadiiLayer = L.layerGroup().addTo(map);
+    const quadrantsLayer = L.layerGroup().addTo(map);
+    const targetMarkersLayer = L.layerGroup().addTo(map);
 
     // IMD Marine Warning Quadrants (Reference Image 2 pink boxes)
-    const IMD_QUADRANTS = [
-      { name: "WCB", label: "West Central Bay", latMin: 15.0, latMax: 20.5, lonMin: 80.5, lonMax: 88.5 },
-      { name: "ECB", label: "East Central Bay", latMin: 15.0, latMax: 20.5, lonMin: 88.5, lonMax: 95.0 },
-      { name: "SWB", label: "South West Bay", latMin: 5.0, latMax: 15.0, lonMin: 80.0, lonMax: 88.5 },
-      { name: "SEB", label: "South East Bay", latMin: 5.0, latMax: 15.0, lonMin: 88.5, lonMax: 95.0 }
+    const IMD_QUADRANTS_DATA = [
+      { name: "WCB", label: "West Central Bay", bounds: [[15.0, 80.5], [20.5, 88.5]] },
+      { name: "ECB", label: "East Central Bay", bounds: [[15.0, 88.5], [20.5, 95.0]] },
+      { name: "SWB", label: "South West Bay", bounds: [[5.0, 80.0], [15.0, 88.5]] },
+      { name: "SEB", label: "South East Bay", bounds: [[5.0, 88.5], [15.0, 95.0]] }
     ];
 
-    // =========================================================================
-    // 3. 3D Geospatial Real-World Satellite Engine
-    // =========================================================================
-    class SatelliteGeospatialSimulation {
-      constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext("2d");
+    function renderIMDQuadrants() {
+      quadrantsLayer.clearLayers();
+      if (!document.getElementById("chkQuadrants").checked) return;
 
-        // Camera state
-        this.rotLon = 86.0;  // Centered on Bay of Bengal
-        this.rotLat = 12.0;
-        this.zoom = 1.35;
-        this.minZoom = 0.6;
-        this.maxZoom = 4.0;
-        this.autoRotate = false;
-
-        // View options
-        this.theme = "ir";      // 'ir' (monochrome) or 'rgb' (enhanced false-color)
-        this.showGradCAM = true; // Toggle Grad-CAM convective attention overlay
-        this.showStateBorders = true;
-        this.showLatLonGrid = true;
-        this.showQuadrants = true;
-
-        this.currentScenario = SCENARIOS.ditwah;
-        this.vortexAngle = 0.0;
-
-        this.initCanvasSize();
-        this.setupEventListeners();
-        this.renderLoop = this.renderLoop.bind(this);
-        requestAnimationFrame(this.renderLoop);
-      }
-
-      initCanvasSize() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.dpr = window.devicePixelRatio || 1;
-        this.canvas.width = rect.width * this.dpr;
-        this.canvas.height = rect.height * this.dpr;
-        this.ctx.scale(this.dpr, this.dpr);
-        this.width = rect.width;
-        this.height = rect.height;
-      }
-
-      setupEventListeners() {
-        window.addEventListener("resize", () => this.initCanvasSize());
-
-        // Mouse drag rotation
-        let isDragging = false, lastX = 0, lastY = 0;
-        this.canvas.addEventListener("mousedown", (e) => {
-          isDragging = true;
-          lastX = e.clientX;
-          lastY = e.clientY;
+      IMD_QUADRANTS_DATA.forEach(q => {
+        const rect = L.rectangle(q.bounds, {
+          color: "#E879F9",
+          weight: 2,
+          fillOpacity: 0.05,
+          fillColor: "#E879F9",
+          dashArray: "4, 4"
         });
-        window.addEventListener("mouseup", () => { isDragging = false; });
-        window.addEventListener("mousemove", (e) => {
-          if (!isDragging) return;
-          const dx = e.clientX - lastX;
-          const dy = e.clientY - lastY;
-          lastX = e.clientX;
-          lastY = e.clientY;
-
-          this.rotLon -= dx * (0.35 / this.zoom);
-          this.rotLat += dy * (0.35 / this.zoom);
-          this.rotLat = Math.max(-75, Math.min(75, this.rotLat));
+        rect.bindTooltip(`<span class="font-mono font-bold text-xs text-pink-400">${q.name}</span> (${q.label})`, {
+          permanent: true,
+          direction: "center",
+          className: "bg-slate-950/80 border border-pink-500/40 text-pink-300 text-[10px] px-1.5 py-0.5 rounded shadow"
         });
+        quadrantsLayer.addLayer(rect);
+      });
+    }
 
-        // Wheel zoom
-        this.canvas.addEventListener("wheel", (e) => {
-          e.preventDefault();
-          const factor = e.deltaY < 0 ? 1.12 : 0.89;
-          this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
-        }, { passive: false });
-      }
+    // =========================================================================
+    // 4. Dynamic Cyclone Cloud & Grad-CAM Canvas Overlay
+    // =========================================================================
+    // Custom Leaflet Overlay that redraws on move/zoom with swirling cyclone clouds
+    const CycloneCanvasLayer = L.Layer.extend({
+      onAdd: function(mapInstance) {
+        this._map = mapInstance;
+        this._canvas = L.DomUtil.create("canvas", "leaflet-cyclone-layer");
+        this._canvas.style.position = "absolute";
+        this._canvas.style.top = "0";
+        this._canvas.style.left = "0";
+        this._canvas.style.pointerEvents = "none";
+        this._canvas.style.zIndex = "400";
+        this._ctx = this._canvas.getContext("2d");
 
-      setScenario(sc) {
-        this.currentScenario = sc;
-        this.targetLat = sc.camTarget.lat;
-        this.targetLon = sc.camTarget.lon;
-      }
+        const pane = mapInstance.getPanes().overlayPane;
+        pane.appendChild(this._canvas);
 
-      project(latDeg, lonDeg) {
-        const cx = this.width / 2;
-        const cy = this.height / 2;
-        const R = Math.min(this.width, this.height) * 0.44 * this.zoom;
+        mapInstance.on("move", this._reset, this);
+        mapInstance.on("resize", this._reset, this);
+        this._reset();
+        this._startAnimation();
+      },
 
-        const phi = (latDeg * Math.PI) / 180;
-        const lambda = (lonDeg * Math.PI) / 180;
-        const phi0 = (this.rotLat * Math.PI) / 180;
-        const lambda0 = (this.rotLon * Math.PI) / 180;
+      onRemove: function(mapInstance) {
+        mapInstance.getPanes().overlayPane.removeChild(this._canvas);
+        mapInstance.off("move", this._reset, this);
+        mapInstance.off("resize", this._reset, this);
+        if (this._animId) cancelAnimationFrame(this._animId);
+      },
 
-        const dLambda = lambda - lambda0;
+      _reset: function() {
+        const bounds = this._map.getBounds();
+        const topLeft = this._map.latLngToLayerPoint(bounds.getNorthWest());
+        const size = this._map.getSize();
 
-        const x = Math.cos(phi) * Math.sin(dLambda);
-        const y = Math.cos(phi0) * Math.sin(phi) - Math.sin(phi0) * Math.cos(phi) * Math.cos(dLambda);
-        const z = Math.sin(phi0) * Math.sin(phi) + Math.cos(phi0) * Math.cos(phi) * Math.cos(dLambda);
+        L.DomUtil.setPosition(this._canvas, topLeft);
+        this._canvas.width = size.x;
+        this._canvas.height = size.y;
+        this._draw();
+      },
 
-        return {
-          x: cx + R * x,
-          y: cy - R * y,
-          z: z,
-          visible: z > 0.05,
-          radius: R
+      _startAnimation: function() {
+        this._angle = 0;
+        const animate = () => {
+          this._angle += 0.025; // swirling rotation
+          this._draw();
+          this._animId = requestAnimationFrame(animate);
         };
-      }
+        this._animId = requestAnimationFrame(animate);
+      },
 
-      renderLoop() {
-        const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.width, this.height);
+      _draw: function() {
+        if (!this._ctx || !this._map) return;
+        const ctx = this._ctx;
+        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
-        // Smooth camera transition
-        if (this.targetLat !== undefined && this.targetLon !== undefined) {
-          this.rotLat += (this.targetLat - this.rotLat) * 0.08;
-          let diffLon = (this.targetLon - this.rotLon) % 360;
-          if (diffLon > 180) diffLon -= 360;
-          if (diffLon < -180) diffLon += 360;
-          this.rotLon += diffLon * 0.08;
-          if (Math.abs(this.targetLat - this.rotLat) < 0.1 && Math.abs(diffLon) < 0.1) {
-            this.targetLat = undefined;
-            this.targetLon = undefined;
-          }
+        // Get current eye position based on time scrubber
+        const currentCoord = getPositionAtTime(currentTimeStep);
+        const centerPt = this._map.latLngToContainerPoint([currentCoord.lat, currentCoord.lon]);
+
+        // Draw active cyclone
+        this._drawVortex(ctx, centerPt.x, centerPt.y, activeScenario.obs.wind, showGradCAM, this._angle);
+
+        // If dual-system scenario, also draw second system (Senyar)
+        if (activeScenarioKey === "dual_vortex" && activeScenario.secondSystem) {
+          const secondPt = this._map.latLngToContainerPoint([activeScenario.secondSystem.lat, activeScenario.secondSystem.lon]);
+          this._drawVortex(ctx, secondPt.x, secondPt.y, activeScenario.secondSystem.wind, false, this._angle * 0.7);
         }
+      },
 
-        if (this.autoRotate) this.rotLon += 0.2;
-        this.vortexAngle += 0.035;
-
-        const cx = this.width / 2;
-        const cy = this.height / 2;
-        const R = Math.min(this.width, this.height) * 0.44 * this.zoom;
-
-        // 1. Base Ocean Globe (Dark Space Black / Deep Navy depending on theme)
-        this.drawOceanBase(ctx, cx, cy, R);
-
-        // 2. Real-World Dashed Lat/Lon Graticule Grid (Matching Reference Images)
-        if (this.showLatLonGrid) {
-          this.drawLatLonGrid(ctx);
-        }
-
-        // 3. IMD Marine Operational Warning Quadrants (WCB, ECB, SWB, SEB)
-        if (this.showQuadrants) {
-          this.drawIMDQuadrants(ctx);
-        }
-
-        // 4. Real-World Coastlines & Geopolitical State Boundaries
-        this.drawCoastlinesAndStates(ctx);
-
-        // 5. Authentic Satellite Cloud Spiral & Vortex (Monochrome IR or Enhanced RGB)
-        this.drawSatelliteCloudSpiral(ctx);
-
-        // 6. Explainable Grad-CAM Heatmap (Convective Core Focus)
-        if (this.showGradCAM) {
-          this.drawGradCAMOverlay(ctx);
-        }
-
-        // 7. Trajectories: Observed Past (Cyan) + PREDICTED MOVEMENT (RED DOTTED LINE)
-        this.drawTrajectories(ctx);
-
-        // 8. Target Callout Boxes & Pointing Arrows (Matching Reference Images 1 & 3)
-        this.drawTargetCallout(ctx);
-
-        requestAnimationFrame(this.renderLoop);
-      }
-
-      drawOceanBase(ctx, cx, cy, R) {
-        ctx.save();
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(0, 0, this.width, this.height);
-
-        // Ocean globe sphere
-        const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.05, cx, cy, R);
-        if (this.theme === "rgb") {
-          // Reference Image 2: Deep saturated blue ocean
-          grad.addColorStop(0, "#082f49");
-          grad.addColorStop(0.6, "#031c36");
-          grad.addColorStop(1, "#020617");
-        } else {
-          // Reference Image 1 & 3: Dark space/ocean background
-          grad.addColorStop(0, "#0f172a");
-          grad.addColorStop(0.7, "#050811");
-          grad.addColorStop(1, "#000000");
-        }
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, R, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        ctx.strokeStyle = this.theme === "rgb" ? "rgba(56, 189, 248, 0.4)" : "rgba(148, 163, 184, 0.25)";
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      drawLatLonGrid(ctx) {
-        ctx.save();
-        // Dashed lines exactly like reference satellite images
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
-        ctx.lineWidth = 0.9;
-        ctx.setLineDash([4, 4]);
-
-        // Latitude parallels every 5 degrees (5°N to 35°N)
-        for (let lat = 0; lat <= 35; lat += 5) {
-          ctx.beginPath();
-          let started = false;
-          for (let lon = 55; lon <= 105; lon += 1) {
-            const p = this.project(lat, lon);
-            if (p.visible) {
-              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-              else { ctx.lineTo(p.x, p.y); }
-            } else {
-              started = false;
-            }
-          }
-          ctx.stroke();
-
-          // Latitude degree labels along 60°E meridian
-          const lblP = this.project(lat, 60.0);
-          if (lblP.visible) {
-            ctx.fillStyle = "rgba(203, 213, 225, 0.75)";
-            ctx.font = "9px monospace";
-            ctx.fillText(`${lat}°N`, lblP.x - 24, lblP.y + 3);
-          }
-        }
-
-        // Longitude meridians every 5 degrees (60°E to 105°E)
-        for (let lon = 60; lon <= 105; lon += 5) {
-          ctx.beginPath();
-          let started = false;
-          for (let lat = 0; lat <= 35; lat += 1) {
-            const p = this.project(lat, lon);
-            if (p.visible) {
-              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-              else { ctx.lineTo(p.x, p.y); }
-            } else {
-              started = false;
-            }
-          }
-          ctx.stroke();
-
-          // Longitude degree labels along equator / 2°N
-          const lblP = this.project(1.5, lon);
-          if (lblP.visible) {
-            ctx.fillStyle = "rgba(203, 213, 225, 0.75)";
-            ctx.font = "9px monospace";
-            ctx.fillText(`${lon}°E`, lblP.x - 12, lblP.y + 12);
-          }
-        }
-        ctx.restore();
-      }
-
-      drawIMDQuadrants(ctx) {
-        ctx.save();
-        // Matching Reference Image 2: Pink/Magenta IMD Warning Quadrant Boxes
-        ctx.strokeStyle = "#e879f9"; // Vibrant Pink
-        ctx.lineWidth = 1.4;
-        ctx.setLineDash([5, 4]);
-
-        for (const q of IMD_QUADRANTS) {
-          ctx.beginPath();
-          let started = false;
-
-          // Box perimeter points
-          const perimeter = [
-            [q.latMin, q.lonMin], [q.latMax, q.lonMin],
-            [q.latMax, q.lonMax], [q.latMin, q.lonMax],
-            [q.latMin, q.lonMin]
-          ];
-
-          for (const [lat, lon] of perimeter) {
-            const p = this.project(lat, lon);
-            if (p.visible) {
-              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-              else { ctx.lineTo(p.x, p.y); }
-            }
-          }
-          ctx.stroke();
-
-          // Quadrant Code Label (e.g. WCB, ECB, SWB, SEB)
-          const centerP = this.project((q.latMin + q.latMax) / 2, (q.lonMin + q.lonMax) / 2);
-          if (centerP.visible) {
-            ctx.fillStyle = "#f0abfc";
-            ctx.font = "bold 11px monospace";
-            ctx.fillText(q.name, centerP.x - 14, centerP.y);
-          }
-        }
-        ctx.restore();
-      }
-
-      drawCoastlinesAndStates(ctx) {
-        ctx.save();
-        // High-contrast color: Yellow-gold for Enhanced RGB, Bright White for Mono IR
-        const borderColor = this.theme === "rgb" ? "#facc15" : "#ffffff";
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 1.5;
-
-        // A. Coastline of India
-        ctx.beginPath();
-        let started = false;
-        for (const [lat, lon] of INDIA_COASTLINE) {
-          const p = this.project(lat, lon);
-          if (p.visible) {
-            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-            else { ctx.lineTo(p.x, p.y); }
-          } else {
-            started = false;
-          }
-        }
-        ctx.stroke();
-
-        // B. Sri Lanka Island
-        ctx.beginPath();
-        started = false;
-        for (const [lat, lon] of SRI_LANKA) {
-          const p = this.project(lat, lon);
-          if (p.visible) {
-            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-            else { ctx.lineTo(p.x, p.y); }
-          }
-        }
-        ctx.stroke();
-
-        // C. Bangladesh & Myanmar Coast
-        ctx.beginPath();
-        started = false;
-        for (const [lat, lon] of BANGLADESH_MYANMAR) {
-          const p = this.project(lat, lon);
-          if (p.visible) {
-            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-            else { ctx.lineTo(p.x, p.y); }
-          }
-        }
-        ctx.stroke();
-
-        // D. Andaman & Nicobar Archipelago
-        for (const arc of ANDAMAN_NICOBAR) {
-          ctx.beginPath();
-          started = false;
-          for (const [lat, lon] of arc) {
-            const p = this.project(lat, lon);
-            if (p.visible) {
-              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-              else { ctx.lineTo(p.x, p.y); }
-            }
-          }
-          ctx.stroke();
-        }
-
-        // E. Internal Geopolitical State Boundaries (Matching Reference Image 1 & 2)
-        if (this.showStateBorders) {
-          ctx.strokeStyle = this.theme === "rgb" ? "rgba(250, 204, 21, 0.7)" : "rgba(255, 255, 255, 0.75)";
-          ctx.lineWidth = 1.0;
-          ctx.setLineDash([2, 2]);
-
-          for (const b of INDIA_STATE_BORDERS) {
-            ctx.beginPath();
-            started = false;
-            for (const [lat, lon] of b) {
-              const p = this.project(lat, lon);
-              if (p.visible) {
-                if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-                else { ctx.lineTo(p.x, p.y); }
-              }
-            }
-            ctx.stroke();
-          }
-        }
-        ctx.restore();
-      }
-
-      drawSatelliteCloudSpiral(ctx) {
-        const sc = this.currentScenario;
-        const p = this.project(sc.obs.lat, sc.obs.lon);
-        if (!p.visible) return;
-
-        const rScale = (p.radius / 300);
+      _drawVortex: function(ctx, cx, cy, windSpeed, isGradCAM, angleOffset) {
+        // Base scale scales with zoom level
+        const zoom = this._map.getZoom();
+        const radiusScale = Math.pow(2, zoom - 5) * (0.8 + windSpeed / 120);
+        const maxRadius = Math.max(70, Math.min(450, 180 * radiusScale));
 
         ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(this.vortexAngle);
+        ctx.translate(cx, cy);
 
-        const isRGB = this.theme === "rgb";
-        const numArms = 5;
-
-        // Multi-layered logarithmic spiral cloud bands matching authentic INSAT-3D storm morphology
-        for (let arm = 0; arm < numArms; arm++) {
-          const armOffset = (arm * Math.PI * 2) / numArms;
-          ctx.beginPath();
-
-          for (let t = 0.15; t < 1.6; t += 0.05) {
-            const r = 50 * t * rScale;
-            const theta = armOffset + t * 4.2;
-            const sx = r * Math.cos(theta);
-            const sy = r * Math.sin(theta);
-            if (t === 0.15) ctx.moveTo(sx, sy);
-            else ctx.lineTo(sx, sy);
-          }
-
-          // Gradient color: Monochromatic IR (White/Grey) vs Enhanced RGB (Fiery Orange/Red)
-          const grad = ctx.createLinearGradient(0, 0, 60 * rScale, 60 * rScale);
-          if (isRGB) {
-            // Reference Image 2: Fiery red/orange convective tops -> yellow/cyan outer bands
-            grad.addColorStop(0, "rgba(239, 68, 68, 0.95)");
-            grad.addColorStop(0.3, "rgba(249, 115, 22, 0.85)");
-            grad.addColorStop(0.7, "rgba(234, 179, 8, 0.55)");
-            grad.addColorStop(1, "rgba(6, 182, 212, 0.0)");
-          } else {
-            // Reference Image 1 & 3: Brilliant white convective core -> soft grey outer bands
-            grad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-            grad.addColorStop(0.4, "rgba(226, 232, 240, 0.85)");
-            grad.addColorStop(0.75, "rgba(148, 163, 184, 0.45)");
-            grad.addColorStop(1, "rgba(71, 85, 105, 0.0)");
-          }
-
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = (12 - arm * 1.5) * rScale;
-          ctx.stroke();
-        }
-
-        // Central Eye Core (Calm Center)
-        const eyeR = Math.max(5, (sc.obs.eye * 0.3) * rScale);
-        ctx.beginPath();
-        ctx.arc(0, 0, eyeR, 0, Math.PI * 2);
-        ctx.fillStyle = isRGB ? "#0a192f" : "#000000";
-        ctx.fill();
-        ctx.strokeStyle = isRGB ? "#facc15" : "#ffffff";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        ctx.restore();
-
-        // Second system if in dual-vortex mode (Reference Image 3: Senyar remnant)
-        if (sc.secondSystem) {
-          const sp = this.project(sc.secondSystem.lat, sc.secondSystem.lon);
-          if (sp.visible) {
-            ctx.save();
-            ctx.translate(sp.x, sp.y);
-            ctx.rotate(this.vortexAngle * 0.8);
-            for (let a = 0; a < 3; a++) {
-              ctx.beginPath();
-              for (let t = 0.2; t < 1.1; t += 0.05) {
-                const r = 32 * t * rScale;
-                const theta = (a * Math.PI * 2 / 3) + t * 3.5;
-                const sx = r * Math.cos(theta);
-                const sy = r * Math.sin(theta);
-                if (t === 0.2) ctx.moveTo(sx, sy);
-                else ctx.lineTo(sx, sy);
-              }
-              ctx.strokeStyle = "rgba(203, 213, 225, 0.65)";
-              ctx.lineWidth = 7 * rScale;
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
-        }
-      }
-
-      drawGradCAMOverlay(ctx) {
-        const sc = this.currentScenario;
-        const p = this.project(sc.obs.lat, sc.obs.lon);
-        if (!p.visible) return;
-
-        const rScale = (p.radius / 300);
-
+        // Radar beam sweep
         ctx.save();
-        // Grad-CAM Attention Heatmap: Concentrates intense red heat directly onto the convective eyewall
-        const heatGrad = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, 75 * rScale);
-        heatGrad.addColorStop(0, "rgba(220, 38, 38, 0.85)");   // Deep Red (Maximum Attention >90%)
-        heatGrad.addColorStop(0.35, "rgba(249, 115, 22, 0.70)");// Orange
-        heatGrad.addColorStop(0.65, "rgba(234, 179, 8, 0.40)"); // Yellow
-        heatGrad.addColorStop(0.9, "rgba(6, 182, 212, 0.15)");  // Cyan boundary
-        heatGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");         // Zero attention outside
-
+        ctx.rotate(angleOffset * 1.5);
+        const radarGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, maxRadius * 0.95);
+        radarGrad.addColorStop(0, "rgba(56, 189, 248, 0.25)");
+        radarGrad.addColorStop(0.5, "rgba(56, 189, 248, 0.08)");
+        radarGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 75 * rScale, 0, Math.PI * 2);
-        ctx.fillStyle = heatGrad;
-        ctx.fill();
-
-        // Pulsating attention core halo
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 24 * rScale, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
-        ctx.lineWidth = 2.0;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      drawTrajectories(ctx) {
-        const sc = this.currentScenario;
-        const curP = this.project(sc.obs.lat, sc.obs.lon);
-
-        // A. Past Track (Solid Cyan Line)
-        const past = sc.pred.pastTrack;
-        ctx.save();
-        ctx.strokeStyle = "#38bdf8";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        let pastStarted = false;
-        for (const pt of past) {
-          const p = this.project(pt.lat, pt.lon);
-          if (p.visible) {
-            if (!pastStarted) { ctx.moveTo(p.x, p.y); pastStarted = true; }
-            else { ctx.lineTo(p.x, p.y); }
-          }
-        }
-        ctx.stroke();
-        ctx.restore();
-
-        // =====================================================================
-        // B. PREDICTED MOVEMENT OF CYCLONE (USER REQUIREMENT: RED DOTTED LINE)
-        // =====================================================================
-        const waypoints = sc.pred.waypoints;
-        ctx.save();
-
-        // Glowing red drop shadow
-        ctx.shadowColor = "#ef4444";
-        ctx.shadowBlur = 12;
-        ctx.strokeStyle = "#ef4444"; // Vivid Red
-        ctx.lineWidth = 3.2;
-        ctx.setLineDash([7, 7]); // RED DOTTED LINE
-
-        ctx.beginPath();
-        if (curP.visible) ctx.moveTo(curP.x, curP.y);
-
-        let predStarted = curP.visible;
-        for (const wp of waypoints) {
-          const p = this.project(wp.lat, wp.lon);
-          if (p.visible) {
-            if (!predStarted) { ctx.moveTo(p.x, p.y); predStarted = true; }
-            else { ctx.lineTo(p.x, p.y); }
-          }
-        }
-        ctx.stroke();
-        ctx.restore();
-
-        // B.1 Predicted Waypoint Nodes
-        ctx.save();
-        for (const wp of waypoints) {
-          const p = this.project(wp.lat, wp.lon);
-          if (p.visible) {
-            ctx.fillStyle = "#ef4444";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "#ffffff";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Label
-            ctx.fillStyle = "#fca5a5";
-            ctx.font = "bold 9px monospace";
-            ctx.fillText(`${wp.time}`, p.x + 7, p.y + 3);
-          }
-        }
-        ctx.restore();
-
-        // C. Danger Radii at Current Center
-        if (curP.visible) {
-          const rScale = (curP.radius / 300);
-
-          // R30 Gale Warning Disk (Yellow)
-          const r30Px = (sc.pred.r30 * 0.35) * rScale;
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(curP.x, curP.y, r30Px, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(250, 204, 21, 0.75)";
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-          ctx.fillStyle = "rgba(250, 204, 21, 0.08)";
-          ctx.fill();
-          ctx.restore();
-
-          // R50 Destructive Eyewall Disk (Red)
-          const r50Px = (sc.pred.r50 * 0.35) * rScale;
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(curP.x, curP.y, r50Px, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
-          ctx.lineWidth = 1.8;
-          ctx.stroke();
-          ctx.fillStyle = "rgba(239, 68, 68, 0.16)";
-          ctx.fill();
-          ctx.restore();
-        }
-      }
-
-      drawTargetCallout(ctx) {
-        const sc = this.currentScenario;
-        const p = this.project(sc.obs.lat, sc.obs.lon);
-        if (!p.visible) return;
-
-        ctx.save();
-
-        // 1. Red Target Circle around the Eye (Exact match to Reference Images 1 & 3)
-        const eyeCircleR = 18;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, eyeCircleR, 0, Math.PI * 2);
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 3.0;
-        ctx.stroke();
-
-        // Pulsing radar ripple
-        const pulse = (Date.now() % 2000) / 2000;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, eyeCircleR + pulse * 25, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(239, 68, 68, ${1 - pulse})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        // 2. Red Pointer Arrow from callout to eye (Matching Reference Image 1)
-        const calloutX = p.x + 36;
-        const calloutY = p.y + 12;
-
-        ctx.beginPath();
-        ctx.moveTo(calloutX, calloutY);
-        ctx.lineTo(p.x + eyeCircleR + 2, p.y + 4);
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-
-        // Arrow head
-        const arrowAngle = Math.atan2(p.y + 4 - calloutY, p.x + eyeCircleR + 2 - calloutX);
-        ctx.beginPath();
-        ctx.moveTo(p.x + eyeCircleR + 2, p.y + 4);
-        ctx.lineTo(p.x + eyeCircleR + 2 - 8 * Math.cos(arrowAngle - Math.PI / 6), p.y + 4 - 8 * Math.sin(arrowAngle - Math.PI / 6));
-        ctx.lineTo(p.x + eyeCircleR + 2 - 8 * Math.cos(arrowAngle + Math.PI / 6), p.y + 4 - 8 * Math.sin(arrowAngle + Math.PI / 6));
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, maxRadius * 0.95, -0.25, 0.25);
         ctx.closePath();
-        ctx.fillStyle = "#ef4444";
+        ctx.fillStyle = radarGrad;
         ctx.fill();
+        ctx.restore();
 
-        // 3. Red Callout Text Label (e.g. "Ditwah")
-        ctx.fillStyle = "#ef4444";
-        ctx.font = "bold 16px sans-serif";
-        ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 6;
-        ctx.fillText(sc.name.split(" ").pop(), calloutX + 5, calloutY + 6);
+        // Spiral arms count & logarithmic parameters
+        const arms = 6;
+        const totalPoints = 90;
 
-        // 4. Second target if in dual vortex mode (Reference Image 3 yellow circle)
-        if (sc.secondSystem) {
-          const sp = this.project(sc.secondSystem.lat, sc.secondSystem.lon);
-          if (sp.visible) {
+        for (let a = 0; a < arms; a++) {
+          const armAngleOffset = (a * 2 * Math.PI) / arms + angleOffset;
+
+          for (let i = 0; i < totalPoints; i += 3) {
+            const progress = i / totalPoints;
+            const r = Math.pow(progress, 1.4) * maxRadius;
+            const theta = armAngleOffset - progress * 4.5 * Math.PI; // Counter-clockwise Northern Hemisphere cyclonic spiral
+
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+            const blobSize = (14 + progress * 32) * radiusScale;
+
+            const radGrad = ctx.createRadialGradient(x, y, 0, x, y, blobSize);
+
+            if (isGradCAM) {
+              // ==========================================
+              // WITH GRAD-CAM: AI Deep Convective Heatmap
+              // Core eyewall = deep intense red/crimson
+              // Middle feeder bands = orange/yellow
+              // Outer clouds = cyan/blue
+              // ==========================================
+              if (progress < 0.25) {
+                // Peak convective core (eyewall)
+                radGrad.addColorStop(0, "rgba(239, 68, 68, 0.95)");  // Deep red
+                radGrad.addColorStop(0.4, "rgba(249, 115, 22, 0.8)"); // Vivid orange
+                radGrad.addColorStop(1, "rgba(249, 115, 22, 0)");
+              } else if (progress < 0.6) {
+                // Secondary convective feeder bands
+                radGrad.addColorStop(0, "rgba(234, 179, 8, 0.75)");  // Yellow/Amber
+                radGrad.addColorStop(0.5, "rgba(16, 185, 129, 0.45)"); // Emerald/Teal
+                radGrad.addColorStop(1, "rgba(16, 185, 129, 0)");
+              } else {
+                // Outer cirrus shield
+                radGrad.addColorStop(0, "rgba(56, 189, 248, 0.4)");  // Sky blue
+                radGrad.addColorStop(0.7, "rgba(59, 130, 246, 0.15)");
+                radGrad.addColorStop(1, "rgba(59, 130, 246, 0)");
+              }
+            } else {
+              // ==========================================
+              // WITHOUT GRAD-CAM: Realistic Satellite Infrared (10.8µm)
+              // Crisp cold cloud tops: white/grey/silver
+              // Matching Reference Image 1 & 3 INSAT style!
+              // ==========================================
+              if (progress < 0.25) {
+                // Dense opaque eyewall cirrus
+                radGrad.addColorStop(0, "rgba(255, 255, 255, 0.92)");
+                radGrad.addColorStop(0.5, "rgba(226, 232, 240, 0.75)");
+                radGrad.addColorStop(1, "rgba(226, 232, 240, 0)");
+              } else if (progress < 0.6) {
+                // Dense spiral cloud bands
+                radGrad.addColorStop(0, "rgba(203, 213, 225, 0.75)");
+                radGrad.addColorStop(0.6, "rgba(148, 163, 184, 0.45)");
+                radGrad.addColorStop(1, "rgba(148, 163, 184, 0)");
+              } else {
+                // Outer diffuse cirrus canopy
+                radGrad.addColorStop(0, "rgba(148, 163, 184, 0.4)");
+                radGrad.addColorStop(0.8, "rgba(100, 116, 139, 0.15)");
+                radGrad.addColorStop(1, "rgba(100, 116, 139, 0)");
+              }
+            }
+
+            ctx.fillStyle = radGrad;
             ctx.beginPath();
-            ctx.arc(sp.x, sp.y, 16, 0, Math.PI * 2);
-            ctx.strokeStyle = "#facc15";
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
+            ctx.arc(x, y, blobSize, 0, Math.PI * 2);
+            ctx.fill();
           }
         }
 
+        // Inner Eye Cavity (Calm central eye)
+        const eyeRadius = Math.max(6, 16 * radiusScale);
+        ctx.beginPath();
+        ctx.arc(0, 0, eyeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(10, 15, 30, 0.85)"; // Clear eye
+        ctx.fill();
+
         ctx.restore();
+      }
+    });
+
+    const cycloneCloudLayer = new CycloneCanvasLayer();
+    cycloneCloudLayer.addTo(map);
+
+    // =========================================================================
+    // 5. Trajectory Engine: RED DOTTED LINE for Predicted Movement
+    // =========================================================================
+    function renderTrajectoryAndMarkers() {
+      trajectoryLayer.clearLayers();
+      dangerRadiiLayer.clearLayers();
+      targetMarkersLayer.clearLayers();
+
+      const pred = activeScenario.pred;
+      const obs = activeScenario.obs;
+
+      // ----------------------------------------------------
+      // A. OBSERVED PAST TRACK (Solid Cyan Line: -18h to 0h)
+      // ----------------------------------------------------
+      const pastCoords = pred.pastTrack.map(pt => [pt.lat, pt.lon]);
+      const pastPolyline = L.polyline(pastCoords, {
+        color: "#38BDF8",
+        weight: 3.5,
+        opacity: 0.9,
+        lineCap: "round"
+      });
+      trajectoryLayer.addLayer(pastPolyline);
+
+      // Past Waypoint Markers
+      pred.pastTrack.forEach(pt => {
+        const marker = L.circleMarker([pt.lat, pt.lon], {
+          radius: 4,
+          color: "#0284C7",
+          weight: 2,
+          fillColor: "#38BDF8",
+          fillOpacity: 1
+        });
+        marker.bindTooltip(`<b>Past: ${pt.time}</b><br>Lat: ${pt.lat}°N, Lon: ${pt.lon}°E<br>Wind: ${pt.wind} kt`, {
+          className: "bg-slate-900 border border-cyan-500/50 text-cyan-200 text-xs px-2 py-1 rounded shadow-lg"
+        });
+        trajectoryLayer.addLayer(marker);
+      });
+
+      // ----------------------------------------------------
+      // B. PREDICTED MOVEMENT PATH: THE RED DOTTED LINE!
+      // ----------------------------------------------------
+      const predCoords = [[obs.lat, obs.lon], ...pred.waypoints.map(w => [w.lat, w.lon])];
+      
+      const predDottedPolyline = L.polyline(predCoords, {
+        color: "#EF4444",
+        weight: 4.5,
+        opacity: 1,
+        dashArray: "8, 10",
+        lineCap: "round",
+        className: "red-dotted-track"
+      });
+      trajectoryLayer.addLayer(predDottedPolyline);
+
+      // Forecast Cone of Uncertainty (Expanding Red/Amber Polygon)
+      if (document.getElementById("chkCone").checked) {
+        const coneLeft = [];
+        const coneRight = [];
+        pred.waypoints.forEach((w, idx) => {
+          const spreadKm = 25 + (idx + 1) * 22; // Expanding error margin
+          const deltaLat = spreadKm / 111.0;
+          const deltaLon = spreadKm / (111.0 * Math.cos(w.lat * Math.PI / 180));
+          coneLeft.push([w.lat + deltaLat * 0.7, w.lon - deltaLon * 0.7]);
+          coneRight.unshift([w.lat - deltaLat * 0.7, w.lon + deltaLon * 0.7]);
+        });
+        const conePolygonCoords = [[obs.lat, obs.lon], ...coneLeft, ...coneRight];
+        const conePolygon = L.polygon(conePolygonCoords, {
+          color: "#EF4444",
+          weight: 1.5,
+          dashArray: "4, 6",
+          fillColor: "#EF4444",
+          fillOpacity: 0.12
+        });
+        trajectoryLayer.addLayer(conePolygon);
+      }
+
+      // Predicted Waypoint Nodes (+3h, +6h, +9h, +12h, +18h, +24h)
+      pred.waypoints.forEach((w, idx) => {
+        const node = L.circleMarker([w.lat, w.lon], {
+          radius: 5.5,
+          color: "#B91C1C",
+          weight: 2,
+          fillColor: "#EF4444",
+          fillOpacity: 1
+        });
+        
+        node.bindTooltip(`
+          <div class="text-[11px] font-mono leading-tight">
+            <span class="font-bold text-red-400 block">${w.time} Forecast</span>
+            <span>Coord: <b>${w.lat}°N, ${w.lon}°E</b></span><br>
+            <span>Wind: <b class="text-amber-400">${w.wind} kt</b></span><br>
+            <span>Pressure: <b class="text-emerald-400">${w.pressure} hPa</b></span>
+          </div>
+        `, {
+          permanent: false,
+          direction: "top",
+          className: "bg-slate-950 border border-red-500/70 text-slate-100 p-2 rounded-lg shadow-2xl"
+        });
+        trajectoryLayer.addLayer(node);
+      });
+
+      // ----------------------------------------------------
+      // C. DANGER RADII (R30 Gale Wind & R50 Eyewall Danger)
+      // ----------------------------------------------------
+      if (document.getElementById("chkRadii").checked) {
+        // R30 Gale danger radius (in meters)
+        const r30Circle = L.circle([obs.lat, obs.lon], {
+          radius: pred.r30 * 1000,
+          color: "#EAB308",
+          weight: 1.5,
+          dashArray: "6, 6",
+          fillColor: "#EAB308",
+          fillOpacity: 0.06
+        });
+        dangerRadiiLayer.addLayer(r30Circle);
+
+        // R50 Destructive storm core radius (in meters)
+        const r50Circle = L.circle([obs.lat, obs.lon], {
+          radius: pred.r50 * 1000,
+          color: "#EF4444",
+          weight: 2,
+          dashArray: "4, 4",
+          fillColor: "#EF4444",
+          fillOpacity: 0.12
+        });
+        dangerRadiiLayer.addLayer(r50Circle);
+      }
+
+      // ----------------------------------------------------
+      // D. EYE TARGET CALLOUT (Matching Reference Images 1 & 3)
+      // Red target circle with arrow pointing to Ditwah
+      // ----------------------------------------------------
+      const currentPos = getPositionAtTime(currentTimeStep);
+      
+      const targetIcon = L.divIcon({
+        className: "custom-target-marker",
+        html: `
+          <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+            <!-- Pulsing outer ring -->
+            <div class="absolute -inset-4 rounded-full border-2 border-red-500 eye-pulse-ring"></div>
+            <!-- Main Target Circle around the eye -->
+            <div class="w-10 h-10 rounded-full border-2 border-red-500 bg-red-600/25 flex items-center justify-center shadow-lg shadow-red-500/50">
+              <div class="w-2 h-2 rounded-full bg-red-500"></div>
+            </div>
+            <!-- Connecting Arrow pointer & Callout Label (matching Ref Image 1 & 3) -->
+            <div class="ml-2 pl-2 border-l-2 border-red-500 text-red-500 font-extrabold text-sm font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
+              ${activeScenario.name.replace("Cyclonic Storm ", "").replace("Super Cyclone ", "").replace("Extremely Severe Cyclone ", "")}
+            </div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      const eyeMarker = L.marker([currentPos.lat, currentPos.lon], { icon: targetIcon });
+      targetMarkersLayer.addLayer(eyeMarker);
+
+      // If dual-system scenario, add yellow target marker for Senyar
+      if (activeScenarioKey === "dual_vortex" && activeScenario.secondSystem) {
+        const sec = activeScenario.secondSystem;
+        const secondTargetIcon = L.divIcon({
+          className: "custom-second-target",
+          html: `
+            <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+              <div class="w-9 h-9 rounded-full border-2 border-yellow-400 bg-yellow-500/20 flex items-center justify-center shadow-lg shadow-yellow-500/40">
+                <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+              </div>
+              <div class="ml-2 pl-2 border-l-2 border-yellow-400 text-yellow-400 font-bold text-xs font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
+                Senyar
+              </div>
+            </div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        });
+        targetMarkersLayer.addLayer(L.marker([sec.lat, sec.lon], { icon: secondTargetIcon }));
+      }
+    }
+
+    // Helper: Interpolate storm position at scrubbed time
+    function getPositionAtTime(t) {
+      const pred = activeScenario.pred;
+      const obs = activeScenario.obs;
+
+      if (t === 0) return { lat: obs.lat, lon: obs.lon };
+
+      if (t < 0) {
+        // Interpolate along past track
+        const track = pred.pastTrack;
+        const targetHours = t;
+        let p1 = track[0], p2 = track[track.length - 1];
+
+        for (let i = 0; i < track.length - 1; i++) {
+          const h1 = parseInt(track[i].time);
+          const h2 = parseInt(track[i + 1].time);
+          if (targetHours >= h1 && targetHours <= h2) {
+            p1 = track[i];
+            p2 = track[i + 1];
+            const ratio = (targetHours - h1) / (h2 - h1);
+            return {
+              lat: p1.lat + (p2.lat - p1.lat) * ratio,
+              lon: p1.lon + (p2.lon - p1.lon) * ratio
+            };
+          }
+        }
+        return { lat: track[0].lat, lon: track[0].lon };
+      } else {
+        // Interpolate along predicted waypoints
+        const waypoints = [{ time: "0h", lat: obs.lat, lon: obs.lon }, ...pred.waypoints];
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const h1 = parseInt(waypoints[i].time);
+          const h2 = parseInt(waypoints[i + 1].time);
+          if (t >= h1 && t <= h2) {
+            const ratio = (t - h1) / (h2 - h1);
+            return {
+              lat: waypoints[i].lat + (waypoints[i + 1].lat - waypoints[i].lat) * ratio,
+              lon: waypoints[i].lon + (waypoints[i + 1].lon - waypoints[i].lon) * ratio
+            };
+          }
+        }
+        const last = waypoints[waypoints.length - 1];
+        return { lat: last.lat, lon: last.lon };
       }
     }
 
     // =========================================================================
-    // 4. Dashboard Synchronization & Event Binding
+    // 6. Sidebar Data Population (Strictly Top: Live | Bottom: Predicted)
     // =========================================================================
-    let sim;
+    function updateSidebarData() {
+      const obs = activeScenario.obs;
+      const pred = activeScenario.pred;
 
-    function updateRightSidebar(sc) {
-      // HUD Header Callouts
-      document.getElementById("targetStormName").textContent = sc.name;
-      document.getElementById("targetStormBadge").textContent = sc.catCode;
-      document.getElementById("targetCoords").textContent = `${sc.obs.lat.toFixed(1)}°N / ${sc.obs.lon.toFixed(1)}°E`;
-      document.getElementById("targetBasin").textContent = sc.basin;
+      // Top Target Callout Banner
+      document.getElementById("targetStormName").innerText = activeScenario.name;
+      document.getElementById("targetStormBadge").innerText = activeScenario.catCode;
+      document.getElementById("targetCoords").innerText = `${obs.lat.toFixed(1)}°N / ${obs.lon.toFixed(1)}°E`;
+      document.getElementById("targetBasin").innerText = activeScenario.basin;
 
-      // Handle second system card
-      const secondCard = document.getElementById("targetSecondCard");
-      if (sc.secondSystem) {
-        secondCard.classList.remove("hidden");
+      // Second target card visibility for dual vortex
+      const secCard = document.getElementById("targetSecondCard");
+      if (activeScenarioKey === "dual_vortex") {
+        secCard.classList.remove("hidden");
       } else {
-        secondCard.classList.add("hidden");
+        secCard.classList.add("hidden");
       }
 
-      // PART 1: LIVE SENSORY DATA (TOP HALF)
-      document.getElementById("liveWindVal").textContent = sc.obs.wind;
-      document.getElementById("liveWindKmh").textContent = `(${Math.round(sc.obs.wind * 1.852)} km/h)`;
-      document.getElementById("liveGustVal").textContent = `${sc.obs.gust} kt`;
-      document.getElementById("livePressureVal").textContent = sc.obs.pressure;
-      document.getElementById("livePressureDrop").textContent = sc.obs.drop;
-      document.getElementById("liveSstVal").textContent = sc.obs.sst;
-      document.getElementById("liveEyeVal").textContent = sc.obs.eye;
-      document.getElementById("liveSymmetryVal").textContent = `${sc.obs.symmetry}%`;
-      document.getElementById("liveRhVal").textContent = `${sc.obs.rh}%`;
-      document.getElementById("liveShearVal").textContent = `${sc.obs.shear} kt`;
-      document.getElementById("liveSpeedVal").textContent = `${sc.obs.speed} km/h`;
-      document.getElementById("liveFrameId").textContent = sc.obs.frame;
+      // --- PART 1: LIVE SENSORY DATA ---
+      document.getElementById("liveWindVal").innerText = obs.wind;
+      document.getElementById("liveWindKmh").innerText = `(${Math.round(obs.wind * 1.852)} km/h)`;
+      document.getElementById("liveGustVal").innerText = `${obs.gust} kt`;
+      document.getElementById("livePressureVal").innerText = obs.pressure;
+      document.getElementById("livePressureDrop").innerText = obs.drop;
+      document.getElementById("liveSstVal").innerText = obs.sst;
+      document.getElementById("liveEyeVal").innerText = obs.eye;
+      document.getElementById("liveSymmetryVal").innerText = `${obs.symmetry}%`;
+      document.getElementById("liveRhVal").innerText = `${obs.rh}%`;
+      document.getElementById("liveShearVal").innerText = `${obs.shear} kt`;
+      document.getElementById("liveSpeedVal").innerText = `${obs.speed} km/h`;
+      document.getElementById("liveFrameId").innerText = obs.frame;
 
-      // PART 2: PREDICTED DATA (BOTTOM HALF)
-      document.getElementById("predConfidence").textContent = `${sc.confidence} Confidence`;
-      document.getElementById("predCategory").textContent = sc.catName;
-      document.getElementById("predCategoryCode").textContent = sc.catCode;
+      // --- PART 2: PREDICTED DATA ---
+      document.getElementById("predConfidence").innerText = `${activeScenario.confidence} Confidence`;
+      document.getElementById("predCategory").innerText = activeScenario.catName;
+      document.getElementById("predCategoryCode").innerText = activeScenario.catCode;
 
-      document.getElementById("predWindVal").textContent = sc.pred.wind;
-      document.getElementById("predWindDelta").textContent = `(${sc.pred.deltaWind})`;
-      document.getElementById("predWind12h").textContent = `${sc.pred.wind12h} kt`;
+      document.getElementById("predWindVal").innerText = pred.wind;
+      document.getElementById("predWindDelta").innerText = `(${pred.deltaWind})`;
+      document.getElementById("predWind12h").innerText = `${pred.wind12h} kt`;
 
-      document.getElementById("predPressureVal").textContent = sc.pred.pressure;
-      document.getElementById("predPresDelta").textContent = `(${sc.pred.deltaPres})`;
-      document.getElementById("predTrendLabel").textContent = sc.pred.trend;
+      document.getElementById("predPressureVal").innerText = pred.pressure;
+      document.getElementById("predPresDelta").innerText = `(${pred.deltaPres})`;
+      document.getElementById("predTrendLabel").innerText = pred.trend;
 
-      document.getElementById("predR30Val").textContent = sc.pred.r30;
-      document.getElementById("predR50Val").textContent = sc.pred.r50;
+      document.getElementById("predR30Val").innerText = pred.r30;
+      document.getElementById("predR50Val").innerText = pred.r50;
 
-      document.getElementById("predLandfallProb").textContent = sc.pred.landfallProb;
-      document.getElementById("predLandfallEta").textContent = sc.pred.eta;
-      document.getElementById("predLandfallTarget").textContent = sc.pred.target;
+      document.getElementById("predLandfallProb").innerText = pred.landfallProb;
+      document.getElementById("predLandfallTarget").innerText = pred.target;
+      document.getElementById("predLandfallEta").innerText = pred.eta;
 
-      // Populate Predicted Waypoints Table (Red Dotted Path Nodes)
+      // Populate Predicted Waypoints Table (Red Dotted Line Steps)
       const tbody = document.getElementById("predictedWaypointsBody");
       tbody.innerHTML = "";
-      sc.pred.waypoints.forEach(wp => {
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-800/40 transition cursor-pointer";
-        tr.innerHTML = `
-          <td class="py-1 text-red-400 font-bold">${wp.time}</td>
-          <td class="py-1 text-slate-300 font-mono">${wp.lat.toFixed(1)}°N, ${wp.lon.toFixed(1)}°E</td>
-          <td class="py-1 text-right text-amber-400 font-bold">${wp.wind} kt</td>
-          <td class="py-1 text-right text-emerald-400 font-mono">${wp.pressure} hPa</td>
+      pred.waypoints.forEach(w => {
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-800/40 transition";
+        row.innerHTML = `
+          <td class="py-1 text-red-400 font-bold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> ${w.time}
+          </td>
+          <td class="py-1">${w.lat.toFixed(1)}°N, ${w.lon.toFixed(1)}°E</td>
+          <td class="py-1 text-right text-amber-400 font-semibold">${w.wind} kt</td>
+          <td class="py-1 text-right text-emerald-400 font-semibold">${w.pressure} hPa</td>
         `;
-        tbody.appendChild(tr);
+        tbody.appendChild(row);
       });
     }
 
     // =========================================================================
-    // 5. Initializer & Controls Setup
+    // 7. Procedural Simulation of New Random Cyclone Occurrence
     // =========================================================================
-    window.addEventListener("DOMContentLoaded", () => {
-      sim = new SatelliteGeospatialSimulation("globeCanvas");
-      updateRightSidebar(SCENARIOS.ditwah);
+    function generateRandomOccurrence() {
+      // Pick randomly between Bay of Bengal (0) or Arabian Sea (1)
+      const isBayOfBengal = Math.random() > 0.45;
+      
+      let lat, lon, basin, targetCoast;
+      if (isBayOfBengal) {
+        lat = Number((5.5 + Math.random() * 11.0).toFixed(1)); // 5.5°N - 16.5°N
+        lon = Number((83.0 + Math.random() * 9.0).toFixed(1)); // 83.0°E - 92.0°E
+        basin = "Bay of Bengal";
+        targetCoast = ["Odisha Coast (Puri)", "Andhra Coast (Visakhapatnam)", "West Bengal (Sundarbans)", "Tamil Nadu (Chennai)"][Math.floor(Math.random() * 4)];
+      } else {
+        lat = Number((12.0 + Math.random() * 8.0).toFixed(1)); // 12.0°N - 20.0°N
+        lon = Number((65.0 + Math.random() * 6.5).toFixed(1)); // 65.0°E - 71.5°E
+        basin = "Arabian Sea";
+        targetCoast = ["Gujarat Coast (Veraval)", "Maharashtra Coast (Alibag)", "Kutch Coast (Kandla)", "Konkan Coast (Goa)"][Math.floor(Math.random() * 4)];
+      }
 
-      // Scenario dropdown
-      document.getElementById("scenarioSelect").addEventListener("change", (e) => {
-        const val = e.target.value;
-        if (val === "random") {
-          // Generate procedural storm
-          const lat = +(8 + Math.random() * 12).toFixed(1);
-          const lon = +(82 + Math.random() * 10).toFixed(1);
-          const w = Math.floor(45 + Math.random() * 70);
-          const rnd = {
-            name: `Cyclonic Storm SIM_${Math.floor(100 + Math.random() * 900)}`,
-            basin: "Bay of Bengal",
-            catName: w > 64 ? "Severe Cyclonic Storm" : "Cyclonic Storm",
-            catCode: w > 64 ? "SCS" : "CS",
-            confidence: "98.2%",
-            obs: {
-              lat: lat, lon: lon,
-              wind: w, gust: Math.floor(w * 1.25),
-              pressure: Math.floor(1010 - Math.pow(w / 6.7, 1 / 0.644)),
-              drop: "−4.2 hPa / 3h", sst: 30.1, rh: 86, shear: 7.8, speed: 15,
-              eye: 28, symmetry: 89, frame: "INSAT-3D TIR-1"
-            },
-            pred: {
-              wind: w + 8, deltaWind: "+8 kt in 6h", wind12h: w + 15,
-              pressure: Math.floor(1010 - Math.pow((w + 8) / 6.7, 1 / 0.644)),
-              deltaPres: "−7 hPa", trend: "INTENSIFYING",
-              r30: Math.floor(w * 2.8), r50: Math.floor(w * 1.1),
-              landfallProb: "94.0%", eta: "18.0 hrs", target: "Eastern Coast",
-              waypoints: [
-                { time: "+3h", lat: lat + 0.6, lon: lon - 0.5, wind: w + 4, pressure: 988 },
-                { time: "+6h", lat: lat + 1.2, lon: lon - 1.1, wind: w + 8, pressure: 984 },
-                { time: "+12h", lat: lat + 2.5, lon: lon - 2.2, wind: w + 15, pressure: 978 },
-                { time: "+24h", lat: lat + 4.8, lon: lon - 4.2, wind: w + 20, pressure: 970 }
-              ],
-              pastTrack: [
-                { time: "-12h", lat: lat - 1.4, lon: lon + 1.2, wind: w - 10 },
-                { time: "-6h", lat: lat - 0.7, lon: lon + 0.6, wind: w - 5 },
-                { time: "0h", lat: lat, lon: lon, wind: w }
-              ]
-            },
-            camTarget: { lat: lat, lon: lon }
-          };
-          sim.setScenario(rnd);
-          updateRightSidebar(rnd);
-        } else if (SCENARIOS[val]) {
-          sim.setScenario(SCENARIOS[val]);
-          updateRightSidebar(SCENARIOS[val]);
-        }
+      const randomNames = ["Vayu", "Nisarga", "Gulab", "Asani", "Mandous", "Mocha", "Tej", "Hamoon", "Michaung", "Remal", "Dana"];
+      const stormName = `Cyclonic Storm ${randomNames[Math.floor(Math.random() * randomNames.length)]} (Simulated)`;
+
+      const wind = Math.floor(40 + Math.random() * 65); // 40 - 105 kt
+      const pressure = Math.floor(1000 - (wind * 0.65));
+      const gust = Math.floor(wind * 1.3);
+
+      let catName = "Cyclonic Storm";
+      let catCode = "CS";
+      if (wind >= 64 && wind < 90) { catName = "Very Severe Cyclonic Storm"; catCode = "VSCS"; }
+      else if (wind >= 90 && wind < 120) { catName = "Extremely Severe Cyclonic Storm"; catCode = "ESCS"; }
+      else if (wind >= 120) { catName = "Super Cyclonic Storm"; catCode = "SuCS"; }
+
+      // Generate future waypoints along a parabolic recurving trajectory
+      const waypoints = [];
+      const deltaLatStep = 0.5 + Math.random() * 0.4;
+      const deltaLonStep = (isBayOfBengal ? -0.4 : 0.3) + (Math.random() * 0.3);
+
+      [3, 6, 9, 12, 18, 24].forEach((hrs, idx) => {
+        const stepWind = Math.min(135, Math.floor(wind + (idx + 1) * (2 + Math.random() * 3)));
+        const stepPres = Math.max(905, Math.floor(pressure - (idx + 1) * (2 + Math.random() * 2)));
+        waypoints.push({
+          time: `+${hrs}h`,
+          lat: Number((lat + deltaLatStep * (idx + 1) * 0.65).toFixed(1)),
+          lon: Number((lon + deltaLonStep * (idx + 1) * 0.65).toFixed(1)),
+          wind: stepWind,
+          pressure: stepPres
+        });
       });
 
-      // Theme Buttons
-      const btnIR = document.getElementById("btnThemeIR");
-      const btnRGB = document.getElementById("btnThemeRGB");
+      // Past track
+      const pastTrack = [
+        { time: "-18h", lat: Number((lat - deltaLatStep * 2.2).toFixed(1)), lon: Number((lon - deltaLonStep * 2.2).toFixed(1)), wind: Math.max(25, wind - 20) },
+        { time: "-12h", lat: Number((lat - deltaLatStep * 1.5).toFixed(1)), lon: Number((lon - deltaLonStep * 1.5).toFixed(1)), wind: Math.max(30, wind - 14) },
+        { time: "-6h", lat: Number((lat - deltaLatStep * 0.7).toFixed(1)), lon: Number((lon - deltaLonStep * 0.7).toFixed(1)), wind: Math.max(35, wind - 7) },
+        { time: "0h", lat: lat, lon: lon, wind: wind }
+      ];
 
-      btnIR.addEventListener("click", () => {
-        sim.theme = "ir";
-        btnIR.className = "px-2.5 py-1 rounded font-semibold bg-slate-700 text-white transition";
-        btnRGB.className = "px-2.5 py-1 rounded font-medium text-slate-300 hover:text-white transition";
-      });
+      return {
+        name: stormName,
+        basin: basin,
+        catName: catName,
+        catCode: catCode,
+        confidence: `${(96.0 + Math.random() * 3.8).toFixed(1)}%`,
+        obs: {
+          lat: lat, lon: lon,
+          wind: wind, gust: gust,
+          pressure: pressure,
+          drop: `−${(2.5 + Math.random() * 4).toFixed(1)} hPa / 3h`,
+          sst: Number((28.5 + Math.random() * 2.5).toFixed(1)),
+          rh: Math.floor(80 + Math.random() * 15),
+          shear: Number((5.0 + Math.random() * 6.0).toFixed(1)),
+          speed: Math.floor(12 + Math.random() * 10),
+          eye: Math.floor(20 + Math.random() * 25),
+          symmetry: Math.floor(82 + Math.random() * 14),
+          frame: "INSAT-3D Simulation Live"
+        },
+        pred: {
+          wind: waypoints[1].wind,
+          deltaWind: `+${waypoints[1].wind - wind} kt in 6h`,
+          wind12h: waypoints[3].wind,
+          pressure: waypoints[1].pressure,
+          deltaPres: `−${pressure - waypoints[1].pressure} hPa`,
+          trend: wind > 64 ? "RAPID INTENSIFICATION" : "INTENSIFYING",
+          r30: Math.floor(160 + wind * 0.9),
+          r50: Math.floor(50 + wind * 0.4),
+          landfallProb: `${(85.0 + Math.random() * 14.5).toFixed(1)}%`,
+          eta: `${(15.0 + Math.random() * 18.0).toFixed(1)} hrs`,
+          target: targetCoast,
+          waypoints: waypoints,
+          pastTrack: pastTrack
+        },
+        zoom: 6,
+        center: [lat + 1.0, lon]
+      };
+    }
 
-      btnRGB.addEventListener("click", () => {
-        sim.theme = "rgb";
-        btnRGB.className = "px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition";
-        btnIR.className = "px-2.5 py-1 rounded font-medium text-slate-300 hover:text-white transition";
-      });
+    // =========================================================================
+    // 8. Event Listeners & Interactive Controls
+    // =========================================================================
+    function switchScenario(key) {
+      if (key === "random") {
+        activeScenario = generateRandomOccurrence();
+        activeScenarioKey = "random";
+      } else {
+        activeScenarioKey = key;
+        activeScenario = SCENARIOS[key];
+      }
 
-      // Grad-CAM Toggle Button
-      const btnGradCAM = document.getElementById("btnToggleGradCAM");
-      const badgeGradCAM = document.getElementById("gradcamStatusBadge");
+      currentTimeStep = 0;
+      document.getElementById("timeSlider").value = 0;
+      document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
 
-      btnGradCAM.addEventListener("click", () => {
-        sim.showGradCAM = !sim.showGradCAM;
-        if (sim.showGradCAM) {
-          btnGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-rose-500/50 text-rose-400 hover:bg-rose-950/40";
-          document.getElementById("gradcamLabel").textContent = "With Grad-CAM: ON";
-          document.getElementById("gradcamIcon").textContent = "🔥";
-          badgeGradCAM.classList.remove("hidden");
-        } else {
-          btnGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700";
-          document.getElementById("gradcamLabel").textContent = "Without Grad-CAM";
-          document.getElementById("gradcamIcon").textContent = "🛰️";
-          badgeGradCAM.classList.add("hidden");
-        }
-      });
+      updateSidebarData();
+      renderTrajectoryAndMarkers();
+      renderIMDQuadrants();
 
-      // Layer checkboxes
-      document.getElementById("chkStateBorders").addEventListener("change", (e) => {
-        sim.showStateBorders = e.target.checked;
+      // Smoothly pan & zoom map to active cyclone
+      const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
+      map.flyTo(center, activeScenario.zoom || 6, {
+        duration: 1.2,
+        easeLinearity: 0.25
       });
-      document.getElementById("chkLatLonGrid").addEventListener("change", (e) => {
-        sim.showLatLonGrid = e.target.checked;
-      });
-      document.getElementById("chkQuadrants").addEventListener("change", (e) => {
-        sim.showQuadrants = e.target.checked;
-      });
+    }
 
-      // Reset camera
-      document.getElementById("btnResetView").addEventListener("click", () => {
-        sim.zoom = 1.35;
-        sim.targetLat = sim.currentScenario.camTarget.lat;
-        sim.targetLon = sim.currentScenario.camTarget.lon;
-      });
-
-      // Zoom buttons
-      document.getElementById("btnZoomIn").addEventListener("click", () => {
-        sim.zoom = Math.min(sim.maxZoom, sim.zoom * 1.25);
-      });
-      document.getElementById("btnZoomOut").addEventListener("click", () => {
-        sim.zoom = Math.max(sim.minZoom, sim.zoom * 0.8);
-      });
-
-      // Spin button
-      document.getElementById("btnAutoRotate").addEventListener("click", function() {
-        sim.autoRotate = !sim.autoRotate;
-        this.classList.toggle("bg-blue-600", sim.autoRotate);
-      });
+    document.getElementById("scenarioSelect").addEventListener("change", (e) => {
+      switchScenario(e.target.value);
     });
+
+    document.getElementById("btnResetView").addEventListener("click", () => {
+      const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
+      map.flyTo(center, activeScenario.zoom || 6, { duration: 0.8 });
+    });
+
+    // Grad-CAM Toggle
+    const btnToggleGradCAM = document.getElementById("btnToggleGradCAM");
+    const gradcamLabel = document.getElementById("gradcamLabel");
+    const gradcamIcon = document.getElementById("gradcamIcon");
+    const gradcamStatusBadge = document.getElementById("gradcamStatusBadge");
+    const gradcamStatusText = document.getElementById("gradcamStatusText");
+
+    btnToggleGradCAM.addEventListener("click", () => {
+      showGradCAM = !showGradCAM;
+      if (showGradCAM) {
+        gradcamLabel.innerText = "With Grad-CAM: ON";
+        gradcamIcon.innerText = "🔥";
+        btnToggleGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-rose-950/60 border border-rose-500 text-rose-400 hover:bg-rose-900/50 shadow-sm shadow-rose-500/30";
+        gradcamStatusBadge.className = "bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2";
+        gradcamStatusText.innerText = "GRAD-CAM CONVECTIVE ATTENTION ACTIVE";
+      } else {
+        gradcamLabel.innerText = "Without Grad-CAM: OFF";
+        gradcamIcon.innerText = "🛰️";
+        btnToggleGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white";
+        gradcamStatusBadge.className = "bg-slate-900/85 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 backdrop-blur shadow-lg flex items-center gap-2";
+        gradcamStatusText.innerText = "NATURAL SATELLITE IR IMAGERY ACTIVE";
+      }
+    });
+
+    // Time scrub slider
+    const timeSlider = document.getElementById("timeSlider");
+    const timeStepLabel = document.getElementById("timeStepLabel");
+
+    timeSlider.addEventListener("input", (e) => {
+      currentTimeStep = parseInt(e.target.value);
+      if (currentTimeStep === 0) {
+        timeStepLabel.innerText = "LIVE (T=0h)";
+      } else if (currentTimeStep < 0) {
+        timeStepLabel.innerText = `PAST (${currentTimeStep}h)`;
+      } else {
+        timeStepLabel.innerText = `FORECAST (+${currentTimeStep}h)`;
+      }
+      renderTrajectoryAndMarkers();
+    });
+
+    // Playback loop
+    const btnPlay = document.getElementById("btnPlay");
+    btnPlay.addEventListener("click", () => {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        btnPlay.innerText = "⏸";
+        btnPlay.classList.replace("bg-blue-600", "bg-amber-600");
+        playInterval = setInterval(() => {
+          let nextTime = currentTimeStep + 3;
+          if (nextTime > 24) nextTime = -18;
+          currentTimeStep = nextTime;
+          timeSlider.value = currentTimeStep;
+          timeSlider.dispatchEvent(new Event("input"));
+        }, 1200);
+      } else {
+        btnPlay.innerText = "▶";
+        btnPlay.classList.replace("bg-amber-600", "bg-blue-600");
+        if (playInterval) clearInterval(playInterval);
+      }
+    });
+
+    // Layer checkboxes
+    document.getElementById("chkQuadrants").addEventListener("change", renderIMDQuadrants);
+    document.getElementById("chkRadii").addEventListener("change", renderTrajectoryAndMarkers);
+    document.getElementById("chkCone").addEventListener("change", renderTrajectoryAndMarkers);
+
+    // Initial boot
+    switchScenario("ditwah");
   </script>
 </body>
 </html>
