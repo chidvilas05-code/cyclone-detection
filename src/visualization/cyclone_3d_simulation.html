@@ -154,6 +154,12 @@
         <span id="gradcamLabel">With Grad-CAM: ON</span>
       </button>
 
+      <!-- Danger Zones Sidebar Toggle Button -->
+      <button id="btnToggleDangerSidebar" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-red-950/50 border border-red-500/50 text-red-300 hover:bg-red-900/40" title="Toggle Danger Area Zones Sidebar">
+        <span>⚠️</span>
+        <span id="labelDangerSidebar">Danger Zones</span>
+      </button>
+
       <!-- Scenario Selector -->
       <select id="scenarioSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500 transition cursor-pointer">
         <option value="ditwah">📍 Cyclonic Storm 'Ditwah' (6.9°N, 87.9°E) [Ref Image 1]</option>
@@ -182,7 +188,7 @@
     <!-- ================================================================ -->
     <!-- LEFT SIDEBAR: DANGER AREA ZONES & COASTAL VULNERABILITY PANEL     -->
     <!-- ================================================================ -->
-    <div class="w-[320px] lg:w-[340px] border-r border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden backdrop-blur">
+    <div id="dangerZonesSidebar" class="w-[320px] lg:w-[340px] border-r border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden backdrop-blur transition-all duration-200">
       
       <!-- Panel Header -->
       <div class="p-3.5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
@@ -190,9 +196,14 @@
           <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
           <h2 class="text-xs font-black uppercase tracking-wider text-red-400">Danger Area Zones</h2>
         </div>
-        <span id="dangerZoneSummaryBadge" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/40">
-          STANDBY
-        </span>
+        <div class="flex items-center gap-1.5">
+          <span id="dangerZoneSummaryBadge" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/40">
+            STANDBY
+          </span>
+          <button id="btnCloseDangerZones" class="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs font-bold leading-none cursor-pointer" title="Hide Danger Area Zones">
+            ✕
+          </button>
+        </div>
       </div>
 
       <!-- Vulnerability Protocol & Navigation Guidance -->
@@ -231,6 +242,13 @@
       
       <!-- Leaflet Map Container -->
       <div id="map" class="w-full h-full map-flat"></div>
+
+      <!-- Floating Reopen Tab for Danger Zones (Shown when sidebar is closed) -->
+      <button id="btnOpenDangerZones" class="hidden absolute top-24 left-3 z-[1001] bg-slate-900/95 hover:bg-slate-800 text-red-400 border border-red-500/60 hover:border-red-400 text-xs font-bold py-1.5 px-3 rounded-lg shadow-2xl backdrop-blur flex items-center gap-2 transition cursor-pointer group pointer-events-auto" title="Open Danger Area Zones Sidebar">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
+        <span class="font-mono uppercase tracking-wider text-[10px]">Danger Area Zones</span>
+        <span class="text-slate-400 group-hover:text-white transition text-xs">▶</span>
+      </button>
 
       <!-- Top Overlay Target Banner & Legend (Matching Reference Images 1, 2, 3) -->
       <div class="absolute top-3 left-3 flex flex-col gap-2 z-[1000] pointer-events-none">
@@ -865,6 +883,43 @@
       }
       setTimeout(() => map.invalidateSize(), 300);
     });
+
+    // Danger Area Zones Sidebar Toggle & Auto Resizing
+    const dangerSidebar = document.getElementById("dangerZonesSidebar");
+    const btnCloseDanger = document.getElementById("btnCloseDangerZones");
+    const btnOpenDanger = document.getElementById("btnOpenDangerZones");
+    const btnToggleDanger = document.getElementById("btnToggleDangerSidebar");
+    const labelDangerSidebar = document.getElementById("labelDangerSidebar");
+
+    function toggleDangerSidebar(forceState) {
+      if (!dangerSidebar) return;
+      const isCurrentlyHidden = dangerSidebar.classList.contains("hidden");
+      const shouldHide = (forceState !== undefined) ? !forceState : !isCurrentlyHidden;
+
+      if (shouldHide) {
+        dangerSidebar.classList.add("hidden");
+        if (btnOpenDanger) btnOpenDanger.classList.remove("hidden");
+        if (btnToggleDanger) {
+          btnToggleDanger.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700/60";
+        }
+        if (labelDangerSidebar) labelDangerSidebar.innerText = "Danger Zones: OFF";
+      } else {
+        dangerSidebar.classList.remove("hidden");
+        if (btnOpenDanger) btnOpenDanger.classList.add("hidden");
+        if (btnToggleDanger) {
+          btnToggleDanger.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-red-950/60 border border-red-500/50 text-red-300 hover:bg-red-900/40";
+        }
+        if (labelDangerSidebar) labelDangerSidebar.innerText = "Danger Zones";
+      }
+
+      // Smoothly invalidate Leaflet viewport to fill or adapt to expanded space
+      setTimeout(() => map.invalidateSize(), 50);
+      setTimeout(() => map.invalidateSize(), 250);
+    }
+
+    if (btnCloseDanger) btnCloseDanger.addEventListener("click", () => toggleDangerSidebar(false));
+    if (btnOpenDanger) btnOpenDanger.addEventListener("click", () => toggleDangerSidebar(true));
+    if (btnToggleDanger) btnToggleDanger.addEventListener("click", () => toggleDangerSidebar());
 
     // =========================================================================
     // 3. Cyclone Layer & Visual Overlays
