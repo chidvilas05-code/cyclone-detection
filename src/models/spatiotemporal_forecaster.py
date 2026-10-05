@@ -18,7 +18,61 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.models.spatiotemporal_classifier import CrossAttentionStreamFusion, PositionalEncoding
+class PositionalEncoding(nn.Module):
+    """Sinusoidal temporal positional encoding for satellite sequence steps."""
+    def __init__(self, d_model: int, max_len: int = 32):
+        super().__init__()
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.register_buffer("pe", pe.unsqueeze(0))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        seq_len = x.size(1)
+        return x + self.pe[:, :seq_len, :]
+
+
+class CrossAttentionStreamFusion(nn.Module):
+    """
+    Bidirectional Interactive Cross-Attention Stream Fusion with Residual Base Skip Connection:
+    - Base Stream: Direct linear fusion of eye and synoptic features preserving pre-trained ConvNeXt embeddings.
+    - Context Stream: Eye features act as Query to probe Synoptic environmental context (shear, moisture, spiral bands).
+    - Zero-Initialized Residual Layer: Guarantees the network starts 100% equivalent to the strong baseline
+      and smoothly learns rich cross-attention interactions without destabilizing early training epochs.
+    """
+    def __init__(self, eye_dim: int, synoptic_dim: int, hidden_dim: int, num_heads: int = 4, dropout: float = 0.15):
+        super().__init__()
+        self.base_fusion = nn.Sequential(
+            nn.Linear(eye_dim + synoptic_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.GELU()
+        )
+
+        self.proj_eye = nn.Linear(eye_dim, hidden_dim)
+        self.proj_syn = nn.Linear(synoptic_dim, hidden_dim)
+
+        self.cross_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, dropout=dropout, batch_first=True)
+        self.norm = nn.LayerNorm(hidden_dim)
+
+        self.refine_mlp = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim)
+        )
+        # Zero-initialize the refinement output so initial predictions are stable
+        nn.init.zeros_(self.refine_mlp[-1].weight)
+        nn.init.zeros_(self.refine_mlp[-1].bias)
+
+    def forward(self, f_eye: torch.Tensor, f_synoptic: torch.Tensor) -> torch.Tensor:
+        base = self.base_fusion(torch.cat([f_eye, f_synoptic], dim=-1))
+        e = self.proj_eye(f_eye).unsqueeze(1)
+        s = self.proj_syn(f_synoptic).unsqueeze(1)
+        ctx, _ = self.cross_attn(query=e, key=s, value=s)
+        out = self.norm(base + self.refine_mlp(ctx.squeeze(1)))
+        return out
 
 
 class MultiTaskSpatiotemporalCycloneModel(nn.Module):

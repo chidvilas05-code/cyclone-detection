@@ -24,7 +24,52 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import torchvision.transforms.functional as TF
 
-from src.data_prep.dataset_sequence import CoherentSequenceTransform, WIND_MEAN, WIND_STD
+WIND_MEAN = 48.4
+WIND_STD = 23.2
+
+
+class CoherentSequenceTransform:
+    """
+    Applies identical spatial augmentations across all K frames in a sequence
+    to preserve physical rotation, vortex structure, and motion dynamics.
+    """
+    def __init__(
+        self,
+        img_size: int = 224,
+        is_train: bool = True,
+        rotation_degrees: float = 180.0
+    ):
+        self.img_size = img_size
+        self.is_train = is_train
+        self.rotation_degrees = rotation_degrees
+        self.normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        )
+
+    def __call__(self, img_sequence: List[Image.Image]) -> torch.Tensor:
+        angle = random.uniform(-self.rotation_degrees, self.rotation_degrees) if self.is_train else 0.0
+        h_flip = (random.random() > 0.5) if self.is_train else False
+        v_flip = (random.random() > 0.5) if self.is_train else False
+
+        processed_frames = []
+        for img in img_sequence:
+            img = img.convert("RGB")
+            img = TF.resize(img, (self.img_size, self.img_size))
+
+            if self.is_train:
+                if angle != 0.0:
+                    img = TF.rotate(img, angle)
+                if h_flip:
+                    img = TF.hflip(img)
+                if v_flip:
+                    img = TF.vflip(img)
+
+            t = TF.to_tensor(img)
+            t = self.normalize(t)
+            processed_frames.append(t)
+
+        return torch.stack(processed_frames, dim=0)
 
 # Normalization constants
 PRES_MEAN = 988.0
