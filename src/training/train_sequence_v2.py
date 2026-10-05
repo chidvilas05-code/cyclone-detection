@@ -36,7 +36,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 
 # Ensure project root is in sys.path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -50,7 +50,7 @@ from src.data_prep.dataset_sequence_v2 import (
     DANGER_R30_MAX, DANGER_R50_MAX
 )
 from src.models.spatiotemporal_forecaster import MultiTaskSpatiotemporalCycloneModel
-from src.models.losses import FocalOrdinalLoss, WindCategoryConsistencyLoss
+from src.models.losses import FocalOrdinalLoss, WindCategoryConsistencyLoss, AsymmetricWindLoss
 from src.evaluation.evaluate_sequence_v2 import run_v2_sequence_evaluation
 
 from tqdm import tqdm
@@ -78,20 +78,27 @@ def parse_args():
     parser.add_argument("--ordinal_weight", type=float, default=0.08)
 
     # Multi-Task Loss Balancing Weights
-    parser.add_argument("--wind_weight", type=float, default=0.20, help="Wind regression loss weight")
+    parser.add_argument("--wind_weight", type=float, default=0.15, help="Wind regression loss weight")
     parser.add_argument("--trend_weight", type=float, default=0.02, help="Trend loss weight")
-    parser.add_argument("--pressure_weight", type=float, default=0.15, help="Sensory Central Pressure loss weight")
-    parser.add_argument("--evolve_weight", type=float, default=0.20, help="Future evolvement (+6h/+12h) loss weight")
-    parser.add_argument("--danger_weight", type=float, default=0.15, help="Danger area wind radii loss weight")
-    parser.add_argument("--landfall_weight", type=float, default=0.10, help="Landfall probability & ETA loss weight")
+    parser.add_argument("--pressure_weight", type=float, default=0.08, help="Sensory Central Pressure loss weight")
+    parser.add_argument("--evolve_weight", type=float, default=0.05, help="Future evolvement (+6h/+12h) loss weight")
+    parser.add_argument("--danger_weight", type=float, default=0.05, help="Danger area wind radii loss weight")
+    parser.add_argument("--landfall_weight", type=float, default=0.05, help="Landfall probability & ETA loss weight")
     parser.add_argument("--consistency_weight", type=float, default=0.10, help="Wind-Category consistency weight")
 
-    parser.add_argument("--epochs", type=int, default=15, help="Total training epochs")
+    # Threat-Optimization Arguments (Dangerous & Threatening Cyclones)
+    parser.add_argument("--use_threat_sampler", action="store_true", default=True, help="Oversample dangerous Category 3, 4, 5 storms via WeightedRandomSampler")
+    parser.add_argument("--use_asymmetric_wind_loss", action="store_true", default=True, help="Apply 2.5x safety penalty on underestimating severe storms (>=64 kt)")
+    parser.add_argument("--eye_crop_ratio", type=float, default=0.25, help="Eyewall zoom crop ratio (default 0.25 for focal eyewall core)")
+    parser.add_argument("--ri_weight_multiplier", type=float, default=2.0, help="Loss multiplier for Rapid Intensification events (d_wind_12h >= 15 kt)")
+
+    parser.add_argument("--epochs", type=int, default=18, help="Total training epochs")
     parser.add_argument("--warmup_epochs", type=int, default=2, help="Linear LR warmup epochs")
-    parser.add_argument("--patience", type=int, default=5, help="Early stopping patience")
+    parser.add_argument("--freeze_backbone_epochs", type=int, default=2, help="Initial epochs to freeze backbone while multi-task heads adapt")
+    parser.add_argument("--patience", type=int, default=8, help="Early stopping patience")
     parser.add_argument("--use_tta", action="store_true", default=True, help="Use TTA during validation")
-    parser.add_argument("--backbone_lr", type=float, default=2.5e-5, help="Spatial backbone learning rate")
-    parser.add_argument("--lr", type=float, default=2.5e-4, help="Temporal recurrent & multi-task heads learning rate")
+    parser.add_argument("--backbone_lr", type=float, default=1.5e-5, help="Spatial backbone learning rate")
+    parser.add_argument("--lr", type=float, default=1.5e-4, help="Temporal recurrent & multi-task heads learning rate")
     parser.add_argument("--weight_decay", type=float, default=2e-4)
     parser.add_argument("--dropout", type=float, default=0.10)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
@@ -110,9 +117,9 @@ def train_epoch_v2(
     criterion_cat, criterion_wind, criterion_trend, criterion_pressure,
     criterion_evolve, criterion_danger, criterion_landfall,
     criterion_consistency, device, grad_accum_steps=2,
-    wind_weight=0.20, trend_weight=0.02, pressure_weight=0.15,
-    evolve_weight=0.20, danger_weight=0.15, landfall_weight=0.10,
-    consistency_weight=0.10
+    wind_weight=0.15, trend_weight=0.02, pressure_weight=0.08,
+    evolve_weight=0.05, danger_weight=0.05, landfall_weight=0.05,
+    consistency_weight=0.10, ri_weight_multiplier=2.0
 ):
     model.train()
     total_loss = 0.0
@@ -137,14 +144,24 @@ def train_epoch_v2(
         landfall = batch["landfall"].to(device, non_blocking=True).unsqueeze(-1)
         landfall_eta = batch["landfall_eta"].to(device, non_blocking=True).unsqueeze(-1)
 
-        with torch.amp.autocast(device_type="cuda" if "cuda" in device.type else "cpu"):
+        amp_dtype = torch.bfloat16 if ("cuda" in device.type and torch.cuda.is_bf16_supported()) else torch.float16
+        with torch.amp.autocast(device_type="cuda" if "cuda" in device.type else "cpu", dtype=amp_dtype):
             out = model(seq)
 
             loss_c = criterion_cat(out["logits"], cat)
             loss_w = criterion_wind(out["pred_norm_wind"].squeeze(-1), norm_wind)
             loss_t = criterion_trend(out["pred_trend"], trend)
             loss_p = criterion_pressure(out["pred_norm_pressure"].squeeze(-1), norm_pres)
-            loss_e = criterion_evolve(out["pred_evolve"], evolve_target)
+
+            # Rapid Intensification (RI) priority multiplier (d_wind_12h >= 15 kt)
+            if ri_weight_multiplier > 1.0:
+                evolve_diff = F.smooth_l1_loss(out["pred_evolve"], evolve_target, reduction="none")
+                is_ri = (evolve_target[:, 5:6] >= 15.0).float()
+                ri_factor = 1.0 + (ri_weight_multiplier - 1.0) * is_ri
+                loss_e = (evolve_diff * ri_factor).mean()
+            else:
+                loss_e = criterion_evolve(out["pred_evolve"], evolve_target)
+
             loss_d = criterion_danger(out["pred_danger_radii"], danger_radii)
             loss_l = criterion_landfall(out["pred_landfall"], landfall) + 0.5 * criterion_danger(out["pred_landfall_eta"], landfall_eta)
 
@@ -168,15 +185,17 @@ def train_epoch_v2(
             scaler.scale(loss).backward()
             if (batch_idx + 1) % grad_accum_steps == 0 or (batch_idx + 1) == len(dataloader):
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
-                scaler.step(optimizer)
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                if torch.isfinite(grad_norm):
+                    scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
         else:
             loss.backward()
             if (batch_idx + 1) % grad_accum_steps == 0 or (batch_idx + 1) == len(dataloader):
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
-                optimizer.step()
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                if torch.isfinite(grad_norm):
+                    optimizer.step()
                 optimizer.zero_grad(set_to_none=True)
 
         b_size = seq.size(0)
@@ -238,15 +257,17 @@ def evaluate_v2(
             landfall = batch["landfall"].to(device, non_blocking=True).unsqueeze(-1)
             landfall_eta = batch["landfall_eta"].to(device, non_blocking=True).unsqueeze(-1)
 
-            if use_tta:
-                seq_flip = torch.flip(seq, dims=[-1])
-                o1 = model(seq)
-                o2 = model(seq_flip)
-                out = {}
-                for k in o1:
-                    out[k] = 0.5 * (o1[k] + o2[k])
-            else:
-                out = model(seq)
+            amp_dtype = torch.bfloat16 if ("cuda" in device.type and torch.cuda.is_bf16_supported()) else torch.float16
+            with torch.amp.autocast(device_type="cuda" if "cuda" in device.type else "cpu", dtype=amp_dtype):
+                if use_tta:
+                    seq_flip = torch.flip(seq, dims=[-1])
+                    o1 = model(seq)
+                    o2 = model(seq_flip)
+                    out = {}
+                    for k in o1:
+                        out[k] = 0.5 * (o1[k] + o2[k])
+                else:
+                    out = model(seq)
 
             loss_c = criterion_cat(out["logits"], cat)
             loss_w = criterion_wind(out["pred_norm_wind"].squeeze(-1), norm_wind)
@@ -336,7 +357,22 @@ def main():
         print(f"[Dataset Split] Seed={args.seed} | Train: {len(train_ds)} sequences | Val: {len(val_ds)} sequences")
         epochs = args.epochs
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=False)
+    if args.use_threat_sampler and not args.dry_run:
+        # Extract categories for train dataset
+        if hasattr(train_ds, "indices"):
+            train_cats = [full_ds.samples[i]["category"] for i in train_ds.indices]
+        else:
+            train_cats = [s["category"] for s in train_ds.samples]
+        cat_counts = np.bincount(train_cats, minlength=5)
+        # Power-law inverse-frequency weighting
+        cat_weights = 1.0 / (np.maximum(cat_counts, 1).astype(np.float32) ** 0.65)
+        sample_weights = torch.tensor([cat_weights[c] for c in train_cats], dtype=torch.float32)
+        sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers, pin_memory=False)
+        print(f"[Threat Sampler] Active! Frequencies: {cat_counts.tolist()} -> Oversampling Tiers 3 & 4 by up to 2.8x")
+    else:
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=False)
+
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=False)
 
     # 2. Model Instantiation
@@ -347,6 +383,7 @@ def main():
         temporal_engine=args.temporal_engine,
         hidden_dim=args.hidden_dim,
         seq_length=args.seq_length,
+        eye_crop_ratio=args.eye_crop_ratio,
         dropout=args.dropout
     ).to(device)
 
@@ -356,7 +393,8 @@ def main():
 
     # 3. Loss & Optimizer Setup
     if args.use_focal_loss:
-        alpha_weights = torch.tensor([1.0, 1.05, 1.30, 1.15, 1.50], dtype=torch.float32).to(device)
+        # Threat-focused alpha weights: heavily upweights Severe, Very Severe, and Super Cyclones
+        alpha_weights = torch.tensor([0.70, 0.85, 1.40, 1.80, 2.50], dtype=torch.float32).to(device)
         criterion_cat = FocalOrdinalLoss(
             num_classes=5,
             gamma=args.focal_gamma,
@@ -368,7 +406,10 @@ def main():
     else:
         criterion_cat = nn.CrossEntropyLoss(label_smoothing=0.01).to(device)
 
-    criterion_wind = nn.SmoothL1Loss().to(device)
+    if args.use_asymmetric_wind_loss:
+        criterion_wind = AsymmetricWindLoss(severe_thresh_kt=64.0, under_penalty=2.5).to(device)
+    else:
+        criterion_wind = nn.SmoothL1Loss().to(device)
     criterion_trend = nn.CrossEntropyLoss().to(device)
     criterion_pressure = nn.SmoothL1Loss().to(device)
     criterion_evolve = nn.SmoothL1Loss().to(device)
@@ -453,6 +494,22 @@ def main():
         if "cuda" in device.type:
             torch.cuda.empty_cache()
 
+        # Progressive backbone warm-up: freeze spatial backbone for initial epochs
+        if epoch <= args.freeze_backbone_epochs and not args.dry_run:
+            for p in model.eye_expert.parameters():
+                p.requires_grad = False
+            for p in model.synoptic_expert.parameters():
+                p.requires_grad = False
+            if epoch == start_epoch:
+                print(f"[Warmup Stage] Spatial backbone frozen for initial {args.freeze_backbone_epochs} epochs to stabilize multi-task heads.")
+        else:
+            for p in model.eye_expert.parameters():
+                p.requires_grad = True
+            for p in model.synoptic_expert.parameters():
+                p.requires_grad = True
+            if epoch == args.freeze_backbone_epochs + 1 and not args.dry_run:
+                print(f"[Full-Tuning Stage] Spatial backbone unfrozen (LR={args.backbone_lr}). Training all layers.")
+
         t0 = time.time()
         tr_loss, tr_acc, tr_w_mae, tr_p_mae = train_epoch_v2(
             epoch, epochs, model, train_loader, optimizer, scaler,
@@ -466,7 +523,8 @@ def main():
             evolve_weight=args.evolve_weight,
             danger_weight=args.danger_weight,
             landfall_weight=args.landfall_weight,
-            consistency_weight=args.consistency_weight
+            consistency_weight=args.consistency_weight,
+            ri_weight_multiplier=args.ri_weight_multiplier
         )
         val_loss, val_acc, val_w_mae, val_p_mae = evaluate_v2(
             epoch, epochs, model, val_loader,

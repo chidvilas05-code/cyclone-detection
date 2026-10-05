@@ -10,11 +10,20 @@ ENV/
 # Large Raw Datasets (> 100 MB - Exceeds GitHub Limit)
 data/images/*.h5
 data/sensory/ibtracs*.csv
+data/sequences/
 
 # Large Model Checkpoints (> 600 MB - Exceeds GitHub Limit)
-models/vision_model/*.pt
+*.pt
+models/**/*.pt
 
-# Temporary & Cache Artifacts
+# Local Antigravity / AI Agent configurations
+.agents/
+AGENTS.md
+gemini-extension.json
+skills-lock.json
+
+# Simulation & Temporary Cache Artifacts
+models/**/simulation_results/
 *.tmp
 temp/
 scratch/

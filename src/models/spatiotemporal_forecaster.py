@@ -38,7 +38,7 @@ class MultiTaskSpatiotemporalCycloneModel(nn.Module):
         num_heads: int = 4,
         dropout: float = 0.10,
         seq_length: int = 4,
-        eye_crop_ratio: float = 0.50
+        eye_crop_ratio: float = 0.25
     ):
         super().__init__()
         self.eye_crop_ratio = eye_crop_ratio
