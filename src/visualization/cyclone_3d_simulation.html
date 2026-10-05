@@ -283,11 +283,11 @@
         </button>
         <div class="flex flex-col gap-0.5 px-2">
           <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono gap-3">
-            <span>-18h Past</span>
-            <span id="timeStepLabel" class="text-cyan-400 font-bold">LIVE (T=0h)</span>
+            <span>Genesis (22 kt)</span>
+            <span id="timeStepLabel" class="text-cyan-400 font-bold">Genesis (T=0h)</span>
             <span>+24h Landfall</span>
           </div>
-          <input type="range" id="timeSlider" min="-18" max="24" step="0.05" value="0" class="w-56 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+          <input type="range" id="timeSlider" min="0" max="24" step="0.05" value="0" class="w-56 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
         </div>
         <div class="pl-2 border-l border-slate-800 flex flex-col items-center">
           <span class="text-[8px] uppercase tracking-wider text-slate-500 font-mono">Rate</span>
@@ -798,53 +798,56 @@
         center: [20.0, 87.5]
       },
 
-      // REAL SATELLITE CASE: Extremely Severe Cyclonic Storm Montha (2025)
+      // REAL SATELLITE CASE: Cyclone Montha (2025 Evolution from Least Level Genesis to Landfall)
       montha: {
-        name: "Extremely Severe Cyclonic Storm Montha (2025)",
-        basin: "Bay of Bengal (2025 Operations)",
-        catName: "Extremely Severe Cyclonic Storm",
-        catCode: "ESCS",
+        name: "Cyclonic Storm Montha (2025 Evolution)",
+        basin: "Southeast to East Central Bay of Bengal",
+        catName: "Depression",
+        catCode: "DEP",
         obs: {
-          lat: 16.2, lon: 89.8,
-          wind: 125, gust: 155,
-          pressure: 932, drop: "−8.5 hPa / 3h",
-          sst: 30.8, rh: 92, shear: 6.5, speed: 18,
-          eye: 22, symmetry: 96,
-          frame: "GEE MODIS / INSAT-3D 2025 Stream"
+          lat: 9.5, lon: 88.2, // Origin in Southeast Bay of Bengal
+          wind: 22, gust: 30, // 22 kt: Depression / Low Pressure stage (Least level possible)
+          pressure: 1004, drop: "−1.2 hPa / 3h",
+          sst: 31.2, rh: 80, shear: 15.0, speed: 12,
+          eye: 0, symmetry: 42,
+          stageName: "Depression (Least Level Genesis)",
+          catCode: "DEP",
+          frame: "GEE MODIS / INSAT-3D 2025 Genesis Stream"
         },
         pred: {
-          wind: 135, deltaWind: "+10 kt in 6h", wind12h: 140,
-          pressure: 924, deltaPres: "−8 hPa", trend: "RAPID INTENSIFICATION",
+          wind: 130, deltaWind: "+108 kt in 21h", wind12h: 75,
+          pressure: 928, deltaPres: "−76 hPa", trend: "GRADUAL INTENSIFICATION",
           r30: 240, r50: 95,
           landfall: {
             target: "Sittwe Coastal Sector & Cox's Bazar / Teknaf",
             coords: "20.15°N, 92.85°E",
             lat: 20.15, lon: 92.85,
-            eta: "18.0 hrs",
+            eta: "21.0 hrs",
             prob: "99.4%",
             wind: 130,
             gust: 160,
-            pressure: 938,
+            pressure: 928,
             surge: "3.5 - 4.5 m (Catastrophic Coastal Inundation)",
             r30: 260,
             r50: 100
           },
           waypoints: [
-            { time: "+3h", lat: 16.9, lon: 90.2, wind: 128, pressure: 929 },
-            { time: "+6h", lat: 17.7, lon: 90.7, wind: 135, pressure: 924 },
-            { time: "+12h", lat: 19.1, lon: 91.8, wind: 140, pressure: 920 },
-            { time: "+18h", lat: 20.15, lon: 92.85, wind: 130, pressure: 938 },
-            { time: "+24h", lat: 21.6, lon: 94.2, wind: 65, pressure: 975 }
+            { time: "+3h", lat: 10.8, lon: 88.5, wind: 30, pressure: 998 },
+            { time: "+6h", lat: 12.4, lon: 88.9, wind: 45, pressure: 990 },
+            { time: "+10h", lat: 14.3, lon: 89.4, wind: 60, pressure: 978 },
+            { time: "+14h", lat: 16.5, lon: 90.1, wind: 85, pressure: 958 },
+            { time: "+18h", lat: 18.6, lon: 91.2, wind: 125, pressure: 932 },
+            { time: "+21h", lat: 20.15, lon: 92.85, wind: 130, pressure: 928 },
+            { time: "+24h", lat: 21.6, lon: 94.2, wind: 50, pressure: 980 }
           ],
           pastTrack: [
-            { time: "-18h", lat: 13.1, lon: 88.3, wind: 65 },
-            { time: "-12h", lat: 14.0, lon: 88.7, wind: 85 },
-            { time: "-6h", lat: 15.0, lon: 89.2, wind: 105 },
-            { time: "0h", lat: 16.2, lon: 89.8, wind: 125 }
+            { time: "-12h", lat: 8.5, lon: 88.0, wind: 15 },
+            { time: "-6h", lat: 8.9, lon: 88.1, wind: 18 },
+            { time: "0h", lat: 9.5, lon: 88.2, wind: 22 }
           ]
         },
         zoom: 6,
-        center: [18.2, 91.5]
+        center: [15.2, 91.0]
       }
     };
 
@@ -852,7 +855,7 @@
     // 2. Real-World Leaflet Map Setup with Google Satellite & High-Res Basemaps
     // =========================================================================
     const map = L.map("map", {
-      center: [18.2, 91.5],
+      center: [15.2, 91.0],
       zoom: 6,
       zoomControl: true,
       attributionControl: false,
@@ -1639,17 +1642,23 @@
       },
 
       _drawVortex: function(ctx, cx, cy, windSpeed, isGradCAM, angleOffset) {
-        const zoom = this._map.getZoom();
-        const radiusScale = Math.pow(2, zoom - 5) * (0.8 + windSpeed / 120);
-        const maxRadius = Math.max(70, Math.min(450, 180 * radiusScale));
+        // Precise physical-to-pixel projection: scale based on actual geographic km
+        const centerLatLng = this._map.containerPointToLatLng([cx, cy]);
+        const testPt = this._map.latLngToContainerPoint([centerLatLng.lat + 1.0, centerLatLng.lng]);
+        const pixelsPerKm = Math.max(0.08, Math.abs(cy - testPt.y) / 111.0);
+
+        // Natural physical cloud footprint: 55 km for Genesis/Depression up to 180 km at peak intensity
+        const intensityFactor = Math.max(0, Math.min(1.0, (windSpeed - 20) / 110));
+        const physicalRadiusKm = 55 + intensityFactor * 125;
+        const maxRadius = Math.max(22, physicalRadiusKm * pixelsPerKm);
 
         ctx.save();
         ctx.translate(cx, cy);
 
-        // Radar beam sweep
+        // Radar beam sweep (tightly bound to the actual vortex radius)
         ctx.save();
         ctx.rotate(angleOffset * 1.5);
-        const radarGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, maxRadius * 0.95);
+        const radarGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, maxRadius * 0.95);
         radarGrad.addColorStop(0, "rgba(56, 189, 248, 0.25)");
         radarGrad.addColorStop(0.5, "rgba(56, 189, 248, 0.08)");
         radarGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
@@ -1674,7 +1683,7 @@
 
             const x = r * Math.cos(theta);
             const y = r * Math.sin(theta);
-            const blobSize = (14 + progress * 32) * radiusScale;
+            const blobSize = Math.max(2.5, (maxRadius * 0.08) + progress * (maxRadius * 0.16));
 
             const radGrad = ctx.createRadialGradient(x, y, 0, x, y, blobSize);
 
@@ -1715,11 +1724,14 @@
           }
         }
 
-        const eyeRadius = Math.max(6, 16 * radiusScale);
-        ctx.beginPath();
-        ctx.arc(0, 0, eyeRadius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(10, 15, 30, 0.85)";
-        ctx.fill();
+        // Natural eye formation: only visible when storm reaches severe cyclonic strength (>= 45 kt)
+        if (windSpeed >= 45) {
+          const eyeRadius = Math.max(3, maxRadius * (0.07 + (windSpeed >= 90 ? 0.04 : 0)));
+          ctx.beginPath();
+          ctx.arc(0, 0, eyeRadius, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(10, 15, 30, 0.88)";
+          ctx.fill();
+        }
 
         ctx.restore();
       }
@@ -1736,9 +1748,9 @@
       const pred = activeScenario.pred;
 
       if (t === 0) {
-        // PRESENT LIVE OBSERVATION STATE
+        // PRESENT LIVE OBSERVATION STATE: Genesis Stage (Least Level Possible)
         return {
-          timeLabel: "LIVE (T=0h)",
+          timeLabel: "GENESIS (T=0h)",
           isLive: true,
           wind: obs.wind,
           gust: obs.gust,
@@ -1775,19 +1787,19 @@
         // Physical evolution along forecast track
         const prog = Math.min(1.0, t / 24.0);
         const sst = Number((obs.sst - prog * 0.7).toFixed(1));
-        const eye = Math.max(16, Math.round(obs.eye - prog * 8));
-        const symmetry = Math.min(98, Math.round(obs.symmetry + prog * 8));
-        const rh = Math.min(96, Math.round(obs.rh + prog * 6));
-        const shear = Number(Math.max(4.0, (obs.shear - prog * 1.5)).toFixed(1));
-        const speed = Math.round(obs.speed + prog * 4);
+        const eye = currentWind >= 60 ? Math.max(14, Math.round(30 - ((currentWind - 60) / 70) * 14)) : 0;
+        const symmetry = Math.min(98, Math.round(obs.symmetry + prog * 54));
+        const rh = Math.min(96, Math.round(obs.rh + prog * 16));
+        const shear = Number(Math.max(4.0, (obs.shear - prog * 9.5)).toFixed(1));
+        const speed = Math.round(obs.speed + prog * 6);
 
         return {
-          timeLabel: `PROJECTED (+${t}h)`,
+          timeLabel: `PROJECTED (+${t.toFixed(1)}h)`,
           isLive: false,
           wind: currentWind,
           gust: Math.round(currentWind * 1.3),
           pressure: currentPres,
-          drop: `${presDelta >= 0 ? "+" : ""}${presDelta} hPa (vs Live)`,
+          drop: `${presDelta >= 0 ? "+" : ""}${presDelta} hPa (vs Genesis)`,
           sst: sst,
           eye: eye,
           symmetry: symmetry,
@@ -1952,27 +1964,48 @@
         trajectoryLayer.addLayer(node);
       });
 
-      // C. DANGER RADII (Crucial gale & core impact zones - permanently active)
+      // C. DANGER RADII (Gale R34 & Core R50 - dynamically active only when wind threshold is reached)
       const currentCoord = getPositionAtTime(currentTimeStep);
-      const r30Circle = L.circle([currentCoord.lat, currentCoord.lon], {
-        radius: pred.r30 * 1000,
-        color: "#EAB308",
-        weight: 1.5,
-        dashArray: "6, 6",
-        fillColor: "#EAB308",
-        fillOpacity: 0.06
-      });
-      dangerRadiiLayer.addLayer(r30Circle);
+      const currentData = getSensoryDataAtTime(currentTimeStep);
+      const currentWind = currentData.wind || obs.wind;
 
-      const r50Circle = L.circle([currentCoord.lat, currentCoord.lon], {
-        radius: pred.r50 * 1000,
-        color: "#EF4444",
-        weight: 2,
-        dashArray: "4, 4",
-        fillColor: "#EF4444",
-        fillOpacity: 0.12
-      });
-      dangerRadiiLayer.addLayer(r50Circle);
+      // Gale Force (34+ kt) Wind Radius: Only renders when system reaches 34+ kt
+      if (currentWind >= 34) {
+        const dynamicR30 = Math.min(260, Math.max(50, 50 + (currentWind - 34) * 2.2));
+        const r30Circle = L.circle([currentCoord.lat, currentCoord.lon], {
+          radius: dynamicR30 * 1000,
+          color: "#EAB308",
+          weight: 1.5,
+          dashArray: "6, 6",
+          fillColor: "#EAB308",
+          fillOpacity: 0.07
+        });
+        r30Circle.bindTooltip(`<b>Gale Wind Radius (R34): ${Math.round(dynamicR30)} km</b><br>34+ kt (63+ km/h)`, {
+          permanent: false,
+          direction: "right",
+          className: "bg-slate-900 border border-amber-500/50 text-amber-200 text-xs px-2 py-1 rounded"
+        });
+        dangerRadiiLayer.addLayer(r30Circle);
+      }
+
+      // Storm Force (50+ kt) Core Radius: Only renders when system reaches 50+ kt
+      if (currentWind >= 50) {
+        const dynamicR50 = Math.min(100, Math.max(25, 25 + (currentWind - 50) * 0.95));
+        const r50Circle = L.circle([currentCoord.lat, currentCoord.lon], {
+          radius: dynamicR50 * 1000,
+          color: "#EF4444",
+          weight: 2,
+          dashArray: "4, 4",
+          fillColor: "#EF4444",
+          fillOpacity: 0.14
+        });
+        r50Circle.bindTooltip(`<b>Destructive Core Radius (R50): ${Math.round(dynamicR50)} km</b><br>50+ kt (93+ km/h)`, {
+          permanent: false,
+          direction: "right",
+          className: "bg-slate-900 border border-red-500/50 text-red-200 text-xs px-2 py-1 rounded"
+        });
+        dangerRadiiLayer.addLayer(r50Circle);
+      }
 
       // D. EYE TARGET CALLOUT (Tracks scrubbed position)
       const currentPos = getPositionAtTime(currentTimeStep);
@@ -2185,6 +2218,17 @@
       startPlayback();
     }
 
+    function getIMDCategory(wind) {
+      if (wind < 17) return { code: "LPA", name: "Low Pressure Area", color: "bg-slate-700 text-slate-200" };
+      if (wind <= 27) return { code: "DEP", name: "Depression", color: "bg-blue-600/30 text-blue-300 border-blue-500/40" };
+      if (wind <= 33) return { code: "DD", name: "Deep Depression", color: "bg-cyan-600/30 text-cyan-300 border-cyan-500/40" };
+      if (wind <= 47) return { code: "CS", name: "Cyclonic Storm", color: "bg-teal-600/30 text-teal-300 border-teal-500/40" };
+      if (wind <= 63) return { code: "SCS", name: "Severe Cyclonic Storm", color: "bg-amber-600/30 text-amber-300 border-amber-500/40" };
+      if (wind <= 89) return { code: "VSCS", name: "Very Severe Cyclonic Storm", color: "bg-orange-600/30 text-orange-300 border-orange-500/40" };
+      if (wind <= 119) return { code: "ESCS", name: "Extremely Severe Cyclonic Storm", color: "bg-red-600/30 text-red-300 border-red-500/40" };
+      return { code: "SuCS", name: "Super Cyclonic Storm", color: "bg-purple-600/30 text-purple-300 border-purple-500/40" };
+    }
+
     function updateSidebarData() {
       if (!isSimulationStarted) return;
 
@@ -2192,23 +2236,24 @@
       const obs = activeScenario.obs;
       const pred = activeScenario.pred;
       const landfall = pred.landfall || {};
+      const cat = getIMDCategory(currentSensory.wind);
 
-      // Dynamic Header Title & Badge depending on whether looking at Live (0h) or Future (+3h/+6h)
+      // Dynamic Header Title & Badge depending on whether looking at Live Genesis (0h) or Evolved Future (+3h/+6h)
       const headerTitle = document.getElementById("liveSensoryHeaderTitle");
       const dotIndicator = document.getElementById("liveDotIndicator");
       const statusChip = document.getElementById("telemetryStatusChip");
 
       if (Math.abs(currentTimeStep) < 0.05) {
-        headerTitle.innerText = "Live Sensory Observation Data (Present: T=0h)";
+        headerTitle.innerText = `Genesis Observation (Least Level: ${cat.name} ${currentSensory.wind} kt)`;
         headerTitle.className = "text-xs font-bold uppercase tracking-wider text-emerald-400";
         dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot";
-        statusChip.innerText = "LIVE TELEMETRY STREAM";
+        statusChip.innerText = "GENESIS TELEMETRY";
         statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
       } else if (currentTimeStep > 0) {
-        headerTitle.innerText = `Sensory State Evolvement (+${currentTimeStep.toFixed(1)}h / ${formatTimeHourMin(currentTimeStep)})`;
+        headerTitle.innerText = `Evolution (+${currentTimeStep.toFixed(1)}h / ${formatTimeHourMin(currentTimeStep)}): ${cat.name}`;
         headerTitle.className = "text-xs font-bold uppercase tracking-wider text-cyan-400";
         dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse";
-        statusChip.innerText = `+${currentTimeStep.toFixed(1)}h PROJECTED SENSORS`;
+        statusChip.innerText = `+${currentTimeStep.toFixed(1)}h EVOLVED (${cat.code})`;
         statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20";
       } else {
         headerTitle.innerText = `Observed Past Sensory Telemetry (${currentTimeStep.toFixed(1)}h Archive)`;
@@ -2220,7 +2265,9 @@
 
       // Top Target Callout Banner
       document.getElementById("targetStormName").innerText = activeScenario.name;
-      document.getElementById("targetStormBadge").innerText = activeScenario.catCode;
+      const stormBadge = document.getElementById("targetStormBadge");
+      stormBadge.innerText = cat.code;
+      stormBadge.title = cat.name;
       const currentPos = getPositionAtTime(currentTimeStep);
       document.getElementById("targetCoords").innerText = `${currentPos.lat.toFixed(2)}°N / ${currentPos.lon.toFixed(2)}°E`;
       document.getElementById("targetBasin").innerText = `${activeScenario.basin} [${formatTimeHourMin(currentTimeStep)}]`;
