@@ -176,10 +176,57 @@
     </div>
   </header>
 
-  <!-- Main Work Area: Real Global Map (Left) + Split Panel (Right) -->
+  <!-- Main Work Area: Danger Zones (Left) + Real Global Map (Center) + Sensory & Landfall (Right) -->
   <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- LEFT: Real Global Map Container (Leaflet with Google Satellite Tiles) -->
+    <!-- ================================================================ -->
+    <!-- LEFT SIDEBAR: DANGER AREA ZONES & COASTAL VULNERABILITY PANEL     -->
+    <!-- ================================================================ -->
+    <div class="w-[320px] lg:w-[340px] border-r border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden backdrop-blur">
+      
+      <!-- Panel Header -->
+      <div class="p-3.5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
+          <h2 class="text-xs font-black uppercase tracking-wider text-red-400">Danger Area Zones</h2>
+        </div>
+        <span id="dangerZoneSummaryBadge" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/40">
+          STANDBY
+        </span>
+      </div>
+
+      <!-- Vulnerability Protocol & Navigation Guidance -->
+      <div class="px-3.5 pt-3 pb-2.5 bg-gradient-to-b from-red-950/30 to-transparent border-b border-slate-800/60">
+        <div class="flex items-center justify-between text-[10px] text-slate-400">
+          <span class="uppercase tracking-wider font-semibold text-slate-300">Vulnerable Districts</span>
+          <span class="text-[9px] text-cyan-400 font-mono font-semibold">CLICK TO FLY ON MAP</span>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1 leading-snug">
+          High-risk sectors classified by eyewall proximity, storm surge height, and gale exposure.
+        </p>
+      </div>
+
+      <!-- Dynamic List of Danger Prone Areas -->
+      <div id="dangerZonesList" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5">
+        <div class="p-4 text-center text-slate-500 font-mono text-xs italic bg-slate-950/60 rounded-xl border border-slate-800">
+          Awaiting simulation start... Click 'Start Simulation' above
+        </div>
+      </div>
+
+      <!-- Evacuation & Public Advisory Alert -->
+      <div class="p-3 border-t border-slate-800 bg-slate-950/90 text-[10px] text-slate-400">
+        <div class="flex items-center gap-1.5 text-red-400 font-bold mb-1">
+          <span>⚠️</span>
+          <span>Evacuation Protocol Active</span>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-tight">
+          Red alert zones mandate zero-casualty evacuation within 5 km of shoreline prior to eyewall landfall.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- CENTER: Real Global Map Container (Leaflet with Google Satellite Tiles) -->
     <div class="flex-1 relative bg-slate-950 overflow-hidden map-3d-viewport" id="mapWrapper">
       
       <!-- Leaflet Map Container -->
@@ -293,8 +340,8 @@
       </div>
     </div>
 
-    <!-- RIGHT SIDEBAR: Divided into Two Distinct Sections (Top: Live Sensory | Bottom: Predicted) -->
-    <div class="w-[430px] border-l border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden">
+    <!-- RIGHT SIDEBAR: Divided into Two Distinct Sections (Top: Live Sensory | Bottom: Landfall Sensory) -->
+    <div class="w-[390px] xl:w-[410px] border-l border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden">
       
       <!-- ======================================================== -->
       <!-- PART 1: SENSORY OBSERVATION & EVOLVEMENT DATA (TOP HALF) -->
@@ -497,33 +544,6 @@
             <div class="bg-slate-950/60 border border-slate-800/80 rounded p-2 flex items-center justify-between">
               <span class="text-[10px] text-slate-400">Eyewall Core (R50):</span>
               <b id="landfallR50Val" class="text-red-400 font-bold">N/A</b>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================================================================ -->
-        <!-- DANGER PRONE AREAS & VULNERABILITY ZONES (NEW)                   -->
-        <!-- ================================================================ -->
-        <div class="bg-gradient-to-br from-red-950/40 via-slate-900 to-slate-950 border border-red-500/50 rounded-xl p-3 mb-3 shadow-xl">
-          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
-              <span class="text-[10px] uppercase font-black tracking-wider text-red-400">Danger Prone Impact Areas</span>
-            </div>
-            <span id="dangerZoneSummaryBadge" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/40">
-              STANDBY
-            </span>
-          </div>
-
-          <div class="text-[10px] text-slate-400 mb-2 flex items-center justify-between">
-            <span>Vulnerable coastal & inland districts:</span>
-            <span class="text-[9px] text-cyan-400 font-mono font-semibold">CLICK TO FLY ON MAP</span>
-          </div>
-
-          <!-- Dynamic List of Danger Prone Areas -->
-          <div id="dangerZonesList" class="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
-            <div class="p-3 text-center text-slate-500 font-mono text-xs italic bg-slate-950/60 rounded-lg border border-slate-800">
-              Awaiting simulation start... Click 'Start Simulation' above
             </div>
           </div>
         </div>
@@ -849,6 +869,8 @@
 
     let currentBasemap = basemaps.googleSat;
     currentBasemap.addTo(map);
+    setTimeout(() => map.invalidateSize(), 200);
+    window.addEventListener("resize", () => map.invalidateSize());
 
     function setBasemap(key, btnId) {
       map.removeLayer(currentBasemap);
