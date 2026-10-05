@@ -61,11 +61,11 @@ python src/visualization/launch_simulation.py
 - **Predicted Movement Path**: Highlighted as a **vivid red dotted line** with glowing forecast waypoints ($+3\text{h}, +6\text{h}, +9\text{h}, +12\text{h}, +18\text{h}, +24\text{h}$) and an expanding cone of uncertainty.
 - **Random Occurrence Button**: Click `🎲 Simulate New Random Cyclone` to test newly generated storms across different ocean basins in real time.
 
-#### Option B: Unified Streamlit Web Dashboard
+#### Option B: Interactive Streamlit Web Dashboard
 ```powershell
 streamlit run app/app.py
 ```
-Select **"🌐 3D Cyclone Movement & Sensory Simulation"** in the sidebar.
+*Immediately launches the dedicated 3D Interactive Simulation & Multi-Task Forecaster dashboard.*
 
 ---
 
@@ -156,19 +156,23 @@ sih/
 ├── src/
 │   ├── models/
 │   │   ├── spatiotemporal_forecaster.py   # Multi-Task Dual-Scale ConvNeXt + GRU model
-│   │   ├── losses.py                      # AsymmetricWindLoss & consistency loss
-│   │   ├── vision_classifier.py           # Single-frame vision backbone
-│   │   └── sensory_predictor.py           # Tabular oceanic sensory booster
+│   │   └── losses.py                      # Asymmetric severe wind loss & multi-task loss
 │   ├── simulation/
 │   │   └── cyclone_simulator.py           # Multi-basin physical occurrence testbench
 │   ├── visualization/
-│   │   ├── cyclone_3d_simulation.html     # Interactive 3D Earth map with red dotted trajectory
-│   │   └── launch_simulation.py           # Standalone browser launcher
-│   └── evaluation/
-│       ├── evaluate_sequence_v2.py        # Sequence V2 testbench script
-│       └── gradcam.py                     # Explainable Grad-CAM heatmaps
+│   │   ├── cyclone_3d_simulation.html     # Real Google Satellite / ESRI map simulation & forecaster
+│   │   ├── launch_simulation.py           # Standalone browser launcher (port 8055)
+│   │   ├── gradcam_interactive_comparison.html # Interactive Grad-CAM split-view comparison
+│   │   └── gradcam_comparisons/           # Side-by-side satellite Grad-CAM comparisons
+│   ├── evaluation/
+│   │   ├── evaluate_sequence_v2.py        # Sequence V2 testbench script
+│   │   └── gradcam.py                     # Explainable Grad-CAM heatmaps
+│   └── data_prep/
+│       └── dataset_sequence_v2.py         # Temporal sequence preprocessor & coherent transforms
 ├── models/
-│   ├── sequence_model_v2/                 # Checkpoints, evaluation summaries & plots
-│   └── sequence_model/                    # Version 1 baseline model metrics
+│   └── sequence_model_v2/                 # Checkpoint, evaluation summary & diagnostic plots
+├── configs/
+│   └── config.yaml                        # System configuration
+├── requirements.txt                       # Project dependencies
 └── README.md
 ```

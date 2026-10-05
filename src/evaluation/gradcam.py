@@ -8,9 +8,98 @@ import numpy as np
 import cv2
 from PIL import Image
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import transforms
 
-from src.models.vision_classifier import CycloneVisionModel, GradCAM
+
+class GradCAM:
+    """
+    Gradient-weighted Class Activation Mapping (Grad-CAM) for visual explanation.
+    Highlights convective cloud bands, eye wall symmetry, and storm core structures driving AI decisions.
+    """
+    def __init__(self, model: nn.Module, target_layer: Optional[nn.Module] = None):
+        self.model = model
+        if target_layer is not None:
+            self.target_layer = target_layer
+        elif hasattr(model, "get_target_layer_for_gradcam"):
+            self.target_layer = model.get_target_layer_for_gradcam()
+        else:
+            # Fallback to the deepest convolutional layer in model
+            conv_layers = [m for m in model.modules() if isinstance(m, nn.Conv2d)]
+            self.target_layer = conv_layers[-1] if conv_layers else None
+
+        self.gradients = None
+        self.activations = None
+        self.hook_handles = []
+        self._register_hooks()
+
+    def _register_hooks(self):
+        def forward_hook(module, input, output):
+            self.activations = output.detach()
+
+        def backward_hook(module, grad_in, grad_out):
+            self.gradients = grad_out[0].detach()
+
+        if self.target_layer is not None:
+            self.hook_handles.append(self.target_layer.register_forward_hook(forward_hook))
+            self.hook_handles.append(self.target_layer.register_full_backward_hook(backward_hook))
+
+    def remove_hooks(self):
+        for handle in self.hook_handles:
+            handle.remove()
+        self.hook_handles = []
+
+    def generate_cam(
+        self,
+        input_tensor: torch.Tensor,
+        target_class: Optional[int] = None,
+        eye_coords: Optional[Tuple[float, float]] = None,
+        *args,
+        **kwargs
+    ) -> np.ndarray:
+        """
+        Generates 2D Grad-CAM heatmap array normalized between 0.0 and 1.0.
+        input_tensor: Shape (1, 3, H, W)
+        """
+        self.model.eval()
+        self.model.zero_grad()
+
+        import inspect
+        sig = inspect.signature(self.model.forward)
+        if "eye_coords" in sig.parameters:
+            output = self.model(input_tensor, eye_coords=eye_coords)
+        else:
+            output = self.model(input_tensor)
+
+        logits = output[0] if isinstance(output, tuple) else output
+
+        if target_class is None:
+            target_class = torch.argmax(logits, dim=1).item()
+
+        score = logits[0, target_class]
+        score.backward(retain_graph=True)
+
+        h, w = input_tensor.shape[2], input_tensor.shape[3]
+        if self.gradients is None or self.activations is None:
+            return np.zeros((h, w), dtype=np.float32)
+
+        # Global average pooling of gradients
+        weights = torch.mean(self.gradients, dim=(2, 3), keepdim=True)
+        cam = torch.sum(weights * self.activations, dim=1).squeeze(0)
+        cam = F.relu(cam)
+
+        cam = cam.unsqueeze(0).unsqueeze(0)
+        cam = F.interpolate(cam, size=(h, w), mode="bilinear", align_corners=False)
+        cam = cam.squeeze().cpu().numpy()
+
+        cam_min, cam_max = cam.min(), cam.max()
+        if cam_max - cam_min > 1e-8:
+            cam = (cam - cam_min) / (cam_max - cam_min)
+        else:
+            cam = np.zeros_like(cam)
+
+        return cam
 
 
 def preprocess_image_for_model(
@@ -59,31 +148,26 @@ def overlay_heatmap_on_image(
     heatmap_color = cv2.applyColorMap(heatmap_uint8, colormap)
     heatmap_rgb = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
 
-    # Attention threshold mask: only blend where CAM has positive attention!
-    # Values < 0.12 are background; values >= 0.12 smoothly ramp up blending weight
-    mask_weight = np.clip((cam_resized - 0.12) / 0.88, 0.0, 1.0)[:, :, np.newaxis] * alpha
+    # Attention-weighted mask
+    weight = np.clip((cam_resized - 0.15) / 0.85, 0.0, 1.0)
+    weight = np.expand_dims(weight, axis=2)
 
-    # Blend
-    blended = np.uint8((1.0 - mask_weight) * orig_np.astype(np.float32) + mask_weight * heatmap_rgb.astype(np.float32))
-    return Image.fromarray(blended)
+    blended_np = np.uint8(
+        orig_np * (1.0 - weight * alpha) + heatmap_rgb * (weight * alpha)
+    )
+
+    return Image.fromarray(blended_np)
 
 
 def generate_cyclone_gradcam(
-    model: CycloneVisionModel,
+    model: torch.nn.Module,
     pil_image: Image.Image,
     target_class: Optional[int] = None,
-    img_size: int = 224,
-    eye_coords: Optional[Tuple[float, float]] = None
+    eye_coords: Optional[Tuple[float, float]] = None,
+    img_size: int = 224
 ) -> Tuple[Image.Image, np.ndarray, int, float, float, np.ndarray]:
     """
-    Executes forward pass and Grad-CAM backpropagation.
-    Returns:
-      blended_image: PIL Image with heatmap overlay
-      cam_2d: 2D numpy array of activation intensities
-      predicted_class: Integer ID
-      confidence: Float (0.0 to 1.0)
-      pred_wind: Estimated wind speed in knots
-      probs: Array of softmax probabilities across all 5 classes
+    Unified end-to-end Grad-CAM runner for cyclone models.
     """
     device = next(model.parameters()).device
     input_tensor = preprocess_image_for_model(pil_image, img_size=img_size, device=device)
@@ -93,20 +177,21 @@ def generate_cyclone_gradcam(
 
     with torch.enable_grad():
         input_tensor.requires_grad_(True)
-        # Check if model accepts eye_coords
         import inspect
         sig = inspect.signature(model.forward)
         if "eye_coords" in sig.parameters:
-            logits, pred_wind_tensor = model(input_tensor, eye_coords=eye_coords)
+            output = model(input_tensor, eye_coords=eye_coords)
         else:
-            logits, pred_wind_tensor = model(input_tensor)
+            output = model(input_tensor)
+
+        logits = output[0] if isinstance(output, tuple) else output
+        pred_wind_tensor = output[1] if isinstance(output, tuple) and len(output) > 1 else torch.tensor([0.0])
 
         probs = torch.softmax(logits, dim=1).detach().cpu().numpy()[0]
         pred_class = int(np.argmax(probs))
         confidence = float(probs[pred_class])
         pred_wind = float(pred_wind_tensor.detach().cpu().reshape(-1)[0])
 
-        import inspect
         cam_sig = inspect.signature(gradcam_engine.generate_cam)
         cam_kwargs = {}
         if "eye_coords" in cam_sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in cam_sig.parameters.values()):
