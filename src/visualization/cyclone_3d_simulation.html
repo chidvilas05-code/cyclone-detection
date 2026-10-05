@@ -258,56 +258,6 @@
             <span class="text-[10px] text-slate-400">Malacca Strait</span>
           </div>
         </div>
-
-        <!-- Map Layer Toggles & Legend -->
-        <div class="bg-slate-900/90 border border-slate-800/90 backdrop-blur rounded-xl p-2.5 shadow-2xl pointer-events-auto text-[11px] flex flex-col gap-1.5 max-w-[280px]">
-          <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center justify-between">
-            <span>Layers & Legend</span>
-            <span class="text-cyan-400 font-mono text-[9px]">INSAT/IMD GRID</span>
-          </div>
-
-          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-            <input type="checkbox" id="chkQuadrants" checked class="rounded border-slate-700 bg-slate-800 text-pink-500">
-            <span>IMD Warning Sectors (WCB/ECB/SWB/SEB)</span>
-          </label>
-
-          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-            <input type="checkbox" id="chkRadii" checked class="rounded border-slate-700 bg-slate-800 text-amber-500">
-            <span>Gale Wind Radii (R30 & R50 Danger)</span>
-          </label>
-
-          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-            <input type="checkbox" id="chkCone" checked class="rounded border-slate-700 bg-slate-800 text-red-500">
-            <span>Forecast Cone of Uncertainty</span>
-          </label>
-
-          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-            <input type="checkbox" id="chkDangerZones" checked class="rounded border-slate-700 bg-slate-800 text-red-500">
-            <span>Danger Prone Coastal Areas & Pins</span>
-          </label>
-
-          <div class="h-px bg-slate-800 my-0.5"></div>
-
-          <!-- Trajectory Legend -->
-          <div class="flex items-center gap-2">
-            <div class="w-5 h-0.5 bg-cyan-400 rounded"></div>
-            <span class="text-slate-300 text-[10px]">Observed Past Track (-18h to 0h)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-5 h-0.5 border-t-2 border-dashed border-red-500 shadow-sm shadow-red-500/80"></div>
-            <span class="text-red-400 font-bold text-[10px] flex items-center gap-1">
-              <span>●</span> Predicted Movement (Red Dotted Line)
-            </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs">🚩</span>
-            <span class="text-red-400 font-mono text-[10px]">Coastal Landfall Impact Target</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-red-600 border border-red-300 animate-pulse flex items-center justify-center text-[8px] text-white font-bold">!</span>
-            <span class="text-red-300 font-mono text-[10px]">Danger Prone Impact Zones (Map Pins)</span>
-          </div>
-        </div>
       </div>
 
       <!-- Bottom Floating Controls: Playback & Timeline (15s = 1h Movement Engine) -->
@@ -1312,9 +1262,8 @@
       const lfLat = lf.lat || (zones[0] ? zones[0].coords[0] : 13.2);
       const lfLon = lf.lon || (zones[0] ? zones[0].coords[1] : 80.3);
 
-      const isLayerVisible = !document.getElementById("chkDangerZones") || document.getElementById("chkDangerZones").checked;
-
-      if (isLayerVisible) {
+      // Danger prone areas are permanently active during simulation
+      const isLayerVisible = true;
         // Red core surge hazard buffer (R50)
         const surgeRadiusMeters = (lf.r50 || 70) * 1000;
         const surgeCircle = L.circle([lfLat, lfLon], {
@@ -1453,33 +1402,9 @@
       }, 1050);
     }
 
-    // IMD Marine Warning Quadrants
-    const IMD_QUADRANTS_DATA = [
-      { name: "WCB", label: "West Central Bay", bounds: [[15.0, 80.5], [20.5, 88.5]] },
-      { name: "ECB", label: "East Central Bay", bounds: [[15.0, 88.5], [20.5, 95.0]] },
-      { name: "SWB", label: "South West Bay", bounds: [[5.0, 80.0], [15.0, 88.5]] },
-      { name: "SEB", label: "South East Bay", bounds: [[5.0, 88.5], [15.0, 95.0]] }
-    ];
-
+    // IMD Marine Warning Quadrants (Optional layer removed to prevent map clutter)
     function renderIMDQuadrants() {
       quadrantsLayer.clearLayers();
-      if (!isSimulationStarted || !document.getElementById("chkQuadrants").checked) return;
-
-      IMD_QUADRANTS_DATA.forEach(q => {
-        const rect = L.rectangle(q.bounds, {
-          color: "#E879F9",
-          weight: 2,
-          fillOpacity: 0.05,
-          fillColor: "#E879F9",
-          dashArray: "4, 4"
-        });
-        rect.bindTooltip(`<span class="font-mono font-bold text-xs text-pink-400">${q.name}</span> (${q.label})`, {
-          permanent: true,
-          direction: "center",
-          className: "bg-slate-950/80 border border-pink-500/40 text-pink-300 text-[10px] px-1.5 py-0.5 rounded shadow"
-        });
-        quadrantsLayer.addLayer(rect);
-      });
     }
 
     // =========================================================================
@@ -1841,28 +1766,6 @@
       });
       trajectoryLayer.addLayer(predDottedPolyline);
 
-      // Forecast Cone of Uncertainty
-      if (document.getElementById("chkCone").checked) {
-        const coneLeft = [];
-        const coneRight = [];
-        pred.waypoints.forEach((w, idx) => {
-          const spreadKm = 25 + (idx + 1) * 22;
-          const deltaLat = spreadKm / 111.0;
-          const deltaLon = spreadKm / (111.0 * Math.cos(w.lat * Math.PI / 180));
-          coneLeft.push([w.lat + deltaLat * 0.7, w.lon - deltaLon * 0.7]);
-          coneRight.unshift([w.lat - deltaLat * 0.7, w.lon + deltaLon * 0.7]);
-        });
-        const conePolygonCoords = [[obs.lat, obs.lon], ...coneLeft, ...coneRight];
-        const conePolygon = L.polygon(conePolygonCoords, {
-          color: "#EF4444",
-          weight: 1.5,
-          dashArray: "4, 6",
-          fillColor: "#EF4444",
-          fillOpacity: 0.12
-        });
-        trajectoryLayer.addLayer(conePolygon);
-      }
-
       // Predicted Waypoint Nodes
       pred.waypoints.forEach((w) => {
         const isCurrentStep = (currentTimeStep > 0 && Math.abs(parseInt(w.time) - currentTimeStep) <= 0.65);
@@ -1889,29 +1792,27 @@
         trajectoryLayer.addLayer(node);
       });
 
-      // C. DANGER RADII
-      if (document.getElementById("chkRadii").checked) {
-        const currentCoord = getPositionAtTime(currentTimeStep);
-        const r30Circle = L.circle([currentCoord.lat, currentCoord.lon], {
-          radius: pred.r30 * 1000,
-          color: "#EAB308",
-          weight: 1.5,
-          dashArray: "6, 6",
-          fillColor: "#EAB308",
-          fillOpacity: 0.06
-        });
-        dangerRadiiLayer.addLayer(r30Circle);
+      // C. DANGER RADII (Crucial gale & core impact zones - permanently active)
+      const currentCoord = getPositionAtTime(currentTimeStep);
+      const r30Circle = L.circle([currentCoord.lat, currentCoord.lon], {
+        radius: pred.r30 * 1000,
+        color: "#EAB308",
+        weight: 1.5,
+        dashArray: "6, 6",
+        fillColor: "#EAB308",
+        fillOpacity: 0.06
+      });
+      dangerRadiiLayer.addLayer(r30Circle);
 
-        const r50Circle = L.circle([currentCoord.lat, currentCoord.lon], {
-          radius: pred.r50 * 1000,
-          color: "#EF4444",
-          weight: 2,
-          dashArray: "4, 4",
-          fillColor: "#EF4444",
-          fillOpacity: 0.12
-        });
-        dangerRadiiLayer.addLayer(r50Circle);
-      }
+      const r50Circle = L.circle([currentCoord.lat, currentCoord.lon], {
+        radius: pred.r50 * 1000,
+        color: "#EF4444",
+        weight: 2,
+        dashArray: "4, 4",
+        fillColor: "#EF4444",
+        fillOpacity: 0.12
+      });
+      dangerRadiiLayer.addLayer(r50Circle);
 
       // D. EYE TARGET CALLOUT (Tracks scrubbed position)
       const currentPos = getPositionAtTime(currentTimeStep);
@@ -2517,12 +2418,6 @@
         startPlayback();
       }
     });
-
-    // Layer checkboxes
-    document.getElementById("chkQuadrants").addEventListener("change", renderIMDQuadrants);
-    document.getElementById("chkRadii").addEventListener("change", renderTrajectoryAndMarkers);
-    document.getElementById("chkCone").addEventListener("change", renderTrajectoryAndMarkers);
-    document.getElementById("chkDangerZones").addEventListener("change", renderDangerProneAreas);
 
     // Initial state: STANDBY (All values N/A, button is Start Simulation)
     setStandbyState();
