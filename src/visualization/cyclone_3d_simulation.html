@@ -247,6 +247,10 @@
               <span>●</span> Predicted Movement (Red Dotted Line)
             </span>
           </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs">🚩</span>
+            <span class="text-red-400 font-mono text-[10px]">Coastal Landfall Impact Target</span>
+          </div>
         </div>
       </div>
 
@@ -278,15 +282,15 @@
     <div class="w-[430px] border-l border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden">
       
       <!-- ======================================================== -->
-      <!-- PART 1: LIVE SENSORY DATA (TOP HALF)                    -->
+      <!-- PART 1: SENSORY OBSERVATION & EVOLVEMENT DATA (TOP HALF) -->
       <!-- ======================================================== -->
       <div class="flex-1 flex flex-col border-b-2 border-slate-800 overflow-y-auto p-4 bg-slate-900/70">
         
-        <!-- Header -->
-        <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80">
+        <!-- Header with Live/Evolved Title -->
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot"></span>
-            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Live Sensory Observation Data</h2>
+            <span id="liveDotIndicator" class="w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot"></span>
+            <h2 id="liveSensoryHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-emerald-400">Live Sensory Observation Data</h2>
           </div>
           <span id="telemetryStatusChip" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">STANDBY (OFFLINE)</span>
         </div>
@@ -297,9 +301,21 @@
             <span class="text-base">⚠️</span>
             <span class="text-[11px] leading-tight">Simulation Standby (All values N/A). Click button to start telemetry stream.</span>
           </div>
-          <button id="btnQuickStart" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase shrink-0 transition">
+          <button id="btnQuickStart" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase shrink-0 transition cursor-pointer">
             Start
           </button>
+        </div>
+
+        <!-- Future Push Quick Selector Bar -->
+        <div class="flex items-center justify-between mb-2.5 px-0.5 py-1 bg-slate-950/40 rounded-lg border border-slate-800/60">
+          <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold pl-2">Future Push:</span>
+          <div class="flex items-center gap-1 pr-1" id="quickTimeButtons">
+            <button class="time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono font-bold transition bg-blue-600 text-white shadow" data-time="0">Live (0h)</button>
+            <button class="time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono transition text-slate-300 bg-slate-800 hover:text-white" data-time="3">+3h</button>
+            <button class="time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono transition text-slate-300 bg-slate-800 hover:text-white" data-time="6">+6h</button>
+            <button class="time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono transition text-slate-300 bg-slate-800 hover:text-white" data-time="12">+12h</button>
+            <button class="time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono transition text-slate-300 bg-slate-800 hover:text-white" data-time="24">+24h Landfall</button>
+          </div>
         </div>
 
         <!-- Sensor Status Badges -->
@@ -391,13 +407,13 @@
         </div>
 
         <div class="mt-2 text-[10px] text-slate-500 flex justify-between items-center">
-          <span>Satellite Channel: <span id="liveFrameId" class="font-mono text-slate-400">STANDBY</span></span>
-          <span class="text-slate-500 font-mono">● OFFLINE</span>
+          <span>Telemetry Stream: <span id="liveFrameId" class="font-mono text-slate-400">STANDBY</span></span>
+          <span class="text-slate-500 font-mono">● SYNCHRONIZED</span>
         </div>
       </div>
 
       <!-- ======================================================== -->
-      <!-- PART 2: PREDICTED DATA (BOTTOM HALF)                    -->
+      <!-- PART 2: PREDICTED DATA & LANDFALL SENSORY (BOTTOM HALF)  -->
       <!-- ======================================================== -->
       <div class="flex-1 flex flex-col overflow-y-auto p-4 bg-slate-950/85">
         
@@ -410,19 +426,15 @@
           <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">GRU + CONVNEXT V2</span>
         </div>
 
-        <!-- Predicted Classification Category Badge -->
+        <!-- Predicted Classification Category (Confidence Meter Removed) -->
         <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-xl p-3 mb-3">
           <div class="flex items-center justify-between">
             <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">PREDICTED INTENSITY TIER</span>
-            <span id="predConfidence" class="text-[10px] font-mono text-slate-400 font-semibold">Awaiting Simulation</span>
+            <span class="text-[10px] font-mono text-cyan-400 font-semibold">IMD / WMO SCALE</span>
           </div>
-          <div class="flex items-center justify-between mt-1">
+          <div class="flex items-center justify-between mt-1.5">
             <span id="predCategory" class="text-base font-extrabold text-slate-400 uppercase tracking-wide">STANDBY</span>
             <span id="predCategoryCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">N/A</span>
-          </div>
-          <!-- Probability distribution -->
-          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden flex">
-            <div id="probBar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
           </div>
         </div>
 
@@ -482,20 +494,66 @@
           </div>
         </div>
 
-        <!-- Coastline Landfall Warning Alert -->
-        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 mb-3 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Coastline Landfall Forecast</span>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span id="predLandfallProb" class="text-base font-bold font-mono text-red-400">N/A</span>
-              <span class="text-xs text-slate-300">Probability</span>
+        <!-- ================================================================ -->
+        <!-- COASTLINE LANDFALL LOCATION & SENSORY DATA WHEN IT HITS (NEW)    -->
+        <!-- ================================================================ -->
+        <div class="bg-gradient-to-br from-red-950/40 via-slate-900 to-slate-950 border border-red-500/40 rounded-xl p-3 mb-3 shadow-xl">
+          <!-- Card Header -->
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
+              <span class="text-[10px] uppercase font-bold tracking-wider text-red-400">Coastline Landfall & Impact Sensory</span>
             </div>
-            <span id="predLandfallTarget" class="text-[10px] text-slate-400 block font-semibold">Awaiting Simulation Start</span>
+            <span id="predLandfallProb" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">N/A</span>
           </div>
-          <div class="text-right">
-            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Shore Arrival ETA</span>
-            <span id="predLandfallEta" class="text-lg font-bold font-mono text-amber-400">N/A</span>
-            <span class="text-[10px] text-slate-400 block">Projected Landfall</span>
+
+          <!-- Landfall Target and Exact Coordinates -->
+          <div class="mt-2.5 flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Impact Coastal Shore</span>
+              <span id="predLandfallTarget" class="text-xs font-bold text-slate-100 block mt-0.5">Awaiting Simulation Start</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Landfall Coordinates</span>
+              <span id="landfallCoords" class="text-xs font-mono font-extrabold text-red-400 block mt-0.5">N/A</span>
+            </div>
+          </div>
+
+          <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Shore Arrival ETA: <b id="predLandfallEta" class="text-amber-400 font-mono font-bold">N/A</b></span>
+            <span>Impact Tier: <b id="landfallCategory" class="text-red-400 font-mono font-bold">N/A</b></span>
+          </div>
+
+          <!-- Sensory Data When Cyclone Hits Landfall (Impact Telemetry Grid) -->
+          <div class="mt-2.5 pt-2 border-t border-slate-800/80">
+            <span class="text-[9px] uppercase font-mono tracking-wider text-red-400/90 block mb-1.5 font-bold">
+              🌊 Sensory Environment at Landfall Impact:
+            </span>
+            
+            <div class="grid grid-cols-3 gap-1.5 text-center text-[10px] font-mono">
+              <div class="bg-slate-950/70 border border-slate-800 rounded p-1.5">
+                <span class="text-slate-400 block text-[8px] uppercase">Landfall Wind</span>
+                <span id="landfallWindVal" class="text-xs font-bold text-amber-400">N/A</span>
+                <span id="landfallGustVal" class="text-[9px] text-slate-400 block mt-0.5">Gust: N/A</span>
+              </div>
+
+              <div class="bg-slate-950/70 border border-slate-800 rounded p-1.5">
+                <span class="text-slate-400 block text-[8px] uppercase">Landfall Pressure</span>
+                <span id="landfallPressureVal" class="text-xs font-bold text-emerald-400">N/A</span>
+                <span class="text-[9px] text-red-400 block mt-0.5">Central Low</span>
+              </div>
+
+              <div class="bg-slate-950/70 border border-slate-800 rounded p-1.5">
+                <span class="text-slate-400 block text-[8px] uppercase">Est. Storm Surge</span>
+                <span id="landfallSurgeVal" class="text-xs font-bold text-cyan-400">N/A</span>
+                <span class="text-[9px] text-slate-400 block mt-0.5">Inundation</span>
+              </div>
+            </div>
+
+            <div class="mt-1.5 flex justify-between text-[10px] font-mono text-slate-400 px-1">
+              <span>Gale Radius at Impact: <b id="landfallR30Val" class="text-yellow-400">N/A</b></span>
+              <span>Eyewall Core: <b id="landfallR50Val" class="text-red-400">N/A</b></span>
+            </div>
           </div>
         </div>
 
@@ -544,7 +602,6 @@
         basin: "South Bay of Bengal",
         catName: "Cyclonic Storm",
         catCode: "CS",
-        confidence: "98.5%",
         obs: {
           lat: 6.9, lon: 87.9,
           wind: 45, gust: 60,
@@ -557,7 +614,19 @@
           wind: 52, deltaWind: "+7 kt in 6h", wind12h: 60,
           pressure: 988, deltaPres: "−6 hPa", trend: "INTENSIFYING",
           r30: 180, r50: 65,
-          landfallProb: "92.4%", eta: "22.5 hrs", target: "Tamil Nadu / Andhra Coast",
+          landfall: {
+            target: "Tamil Nadu / South Andhra Coast (Near Chennai)",
+            coords: "13.2°N, 80.3°E",
+            lat: 13.2, lon: 80.3,
+            eta: "22.5 hrs",
+            prob: "92.4%",
+            wind: 68,
+            gust: 85,
+            pressure: 974,
+            surge: "2.8 - 3.4 m",
+            r30: 205,
+            r50: 70
+          },
           waypoints: [
             { time: "+3h", lat: 7.6, lon: 87.2, wind: 48, pressure: 991 },
             { time: "+6h", lat: 8.4, lon: 86.5, wind: 52, pressure: 988 },
@@ -583,7 +652,6 @@
         basin: "West Central Bay of Bengal",
         catName: "Severe Cyclonic Storm",
         catCode: "SCS",
-        confidence: "99.1%",
         obs: {
           lat: 14.2, lon: 83.5,
           wind: 58, gust: 75,
@@ -596,7 +664,19 @@
           wind: 66, deltaWind: "+8 kt in 6h", wind12h: 75,
           pressure: 975, deltaPres: "−7 hPa", trend: "RAPID DEEPENING",
           r30: 220, r50: 90,
-          landfallProb: "97.5%", eta: "12.0 hrs", target: "Coastal Andhra Pradesh (Machilipatnam)",
+          landfall: {
+            target: "Coastal Andhra Pradesh (Machilipatnam Shore)",
+            coords: "16.2°N, 81.1°E",
+            lat: 16.2, lon: 81.1,
+            eta: "12.0 hrs",
+            prob: "97.5%",
+            wind: 75,
+            gust: 95,
+            pressure: 968,
+            surge: "3.2 - 4.0 m",
+            r30: 240,
+            r50: 95
+          },
           waypoints: [
             { time: "+3h", lat: 14.8, lon: 82.8, wind: 62, pressure: 978 },
             { time: "+6h", lat: 15.4, lon: 82.1, wind: 66, pressure: 975 },
@@ -622,7 +702,6 @@
         basin: "Bay of Bengal & Malacca Strait",
         catName: "Multi-Vortex System",
         catCode: "CS+DEP",
-        confidence: "97.8%",
         obs: {
           lat: 6.9, lon: 87.9,
           wind: 45, gust: 60,
@@ -635,7 +714,19 @@
           wind: 50, deltaWind: "+5 kt in 6h", wind12h: 55,
           pressure: 990, deltaPres: "−4 hPa", trend: "BINARY INTERACTION",
           r30: 175, r50: 60,
-          landfallProb: "88.0%", eta: "24.0 hrs", target: "South India / Sri Lanka",
+          landfall: {
+            target: "South India / Northern Sri Lanka (Palk Strait)",
+            coords: "9.8°N, 80.2°E",
+            lat: 9.8, lon: 80.2,
+            eta: "24.0 hrs",
+            prob: "88.0%",
+            wind: 60,
+            gust: 78,
+            pressure: 980,
+            surge: "1.8 - 2.5 m",
+            r30: 190,
+            r50: 65
+          },
           waypoints: [
             { time: "+3h", lat: 7.5, lon: 87.3, wind: 47, pressure: 992 },
             { time: "+6h", lat: 8.2, lon: 86.6, wind: 50, pressure: 990 },
@@ -666,7 +757,6 @@
         basin: "East Central Arabian Sea",
         catName: "Extremely Severe Cyclonic Storm",
         catCode: "ESCS",
-        confidence: "99.4%",
         obs: {
           lat: 19.8, lon: 66.8,
           wind: 90, gust: 110,
@@ -679,7 +769,19 @@
           wind: 95, deltaWind: "+5 kt in 6h", wind12h: 90,
           pressure: 952, deltaPres: "−6 hPa", trend: "PEAK INTENSITY",
           r30: 240, r50: 110,
-          landfallProb: "98.9%", eta: "18.0 hrs", target: "Saurashtra & Kutch Coast (Jakhau)",
+          landfall: {
+            target: "Saurashtra & Kutch Coast (Jakhau Port Shore)",
+            coords: "23.2°N, 68.7°E",
+            lat: 23.2, lon: 68.7,
+            eta: "18.0 hrs",
+            prob: "98.9%",
+            wind: 85,
+            gust: 105,
+            pressure: 965,
+            surge: "3.5 - 4.2 m",
+            r30: 250,
+            r50: 110
+          },
           waypoints: [
             { time: "+3h", lat: 20.6, lon: 67.2, wind: 92, pressure: 955 },
             { time: "+6h", lat: 21.4, lon: 67.7, wind: 95, pressure: 952 },
@@ -705,7 +807,6 @@
         basin: "North Bay of Bengal",
         catName: "Super Cyclonic Storm",
         catCode: "SuCS",
-        confidence: "99.8%",
         obs: {
           lat: 18.2, lon: 86.9,
           wind: 120, gust: 145,
@@ -718,7 +819,19 @@
           wind: 130, deltaWind: "+10 kt in 6h", wind12h: 134,
           pressure: 915, deltaPres: "−10 hPa", trend: "CATASTROPHIC CORE",
           r30: 290, r50: 140,
-          landfallProb: "99.9%", eta: "14.5 hrs", target: "West Bengal / Bangladesh Coast (Digha)",
+          landfall: {
+            target: "West Bengal / Bangladesh (Digha - Sundarbans)",
+            coords: "21.7°N, 88.3°E",
+            lat: 21.7, lon: 88.3,
+            eta: "14.5 hrs",
+            prob: "99.9%",
+            wind: 134,
+            gust: 165,
+            pressure: 910,
+            surge: "4.8 - 5.8 m",
+            r30: 320,
+            r50: 150
+          },
           waypoints: [
             { time: "+3h", lat: 19.1, lon: 87.3, wind: 125, pressure: 920 },
             { time: "+6h", lat: 20.0, lon: 87.8, wind: 130, pressure: 915 },
@@ -752,24 +865,20 @@
 
     // Basemap tile layers
     const basemaps = {
-      // Real Google Satellite Hybrid (satellite imagery + geopolitical labels)
       googleSat: L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
         subdomains: ["0", "1", "2", "3"],
         maxZoom: 20,
         attribution: "Google Satellite"
       }),
-      // Google Standard Road/Terrain
       googleRoad: L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
         subdomains: ["0", "1", "2", "3"],
         maxZoom: 20,
         attribution: "Google Maps"
       }),
-      // ESRI High-Resolution World Imagery
       esri: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
         attribution: "ESRI World Imagery"
       }),
-      // CartoDB Dark Matter
       dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
         subdomains: "abcd",
         maxZoom: 19,
@@ -777,17 +886,14 @@
       })
     };
 
-    // Default to Google Satellite Hybrid
     let currentBasemap = basemaps.googleSat;
     currentBasemap.addTo(map);
 
-    // Basemap Switcher Events
     function setBasemap(key, btnId) {
       map.removeLayer(currentBasemap);
       currentBasemap = basemaps[key];
       currentBasemap.addTo(map);
 
-      // Update button highlights
       ["btnBasemapGoogleSat", "btnBasemapGoogleRoad", "btnBasemapEsri", "btnBasemapDark"].forEach(id => {
         const btn = document.getElementById(id);
         if (id === btnId) {
@@ -828,13 +934,13 @@
     });
 
     // =========================================================================
-    // 3. Cyclone Layer & Visual Overlays (Canvas + SVG + Markers)
+    // 3. Cyclone Layer & Visual Overlays
     // =========================================================================
     let isSimulationStarted = false; // Controls whether simulation is running or in N/A standby
     let activeScenarioKey = "ditwah";
     let activeScenario = SCENARIOS[activeScenarioKey];
     let showGradCAM = true;
-    let currentTimeStep = 0; // -18 to +24
+    let currentTimeStep = 0; // -18 to +24 (0 = LIVE)
     let isPlaying = false;
     let playInterval = null;
 
@@ -844,7 +950,7 @@
     const quadrantsLayer = L.layerGroup().addTo(map);
     const targetMarkersLayer = L.layerGroup().addTo(map);
 
-    // IMD Marine Warning Quadrants (Reference Image 2 pink boxes)
+    // IMD Marine Warning Quadrants
     const IMD_QUADRANTS_DATA = [
       { name: "WCB", label: "West Central Bay", bounds: [[15.0, 80.5], [20.5, 88.5]] },
       { name: "ECB", label: "East Central Bay", bounds: [[15.0, 88.5], [20.5, 95.0]] },
@@ -876,7 +982,6 @@
     // =========================================================================
     // 4. Dynamic Cyclone Cloud & Grad-CAM Canvas Overlay
     // =========================================================================
-    // Custom Leaflet Overlay that redraws on move/zoom with swirling cyclone clouds
     const CycloneCanvasLayer = L.Layer.extend({
       onAdd: function(mapInstance) {
         this._map = mapInstance;
@@ -918,7 +1023,7 @@
       _startAnimation: function() {
         this._angle = 0;
         const animate = () => {
-          this._angle += 0.025; // swirling rotation
+          this._angle += 0.025;
           this._draw();
           this._animId = requestAnimationFrame(animate);
         };
@@ -933,14 +1038,12 @@
         // DO NOT DRAW CYCLONE VORTEX IF SIMULATION HAS NOT STARTED
         if (!isSimulationStarted) return;
 
-        // Get current eye position based on time scrubber
+        const currentSensory = getSensoryDataAtTime(currentTimeStep);
         const currentCoord = getPositionAtTime(currentTimeStep);
         const centerPt = this._map.latLngToContainerPoint([currentCoord.lat, currentCoord.lon]);
 
-        // Draw active cyclone
-        this._drawVortex(ctx, centerPt.x, centerPt.y, activeScenario.obs.wind, showGradCAM, this._angle);
+        this._drawVortex(ctx, centerPt.x, centerPt.y, currentSensory.wind, showGradCAM, this._angle);
 
-        // If dual-system scenario, also draw second system (Senyar)
         if (activeScenarioKey === "dual_vortex" && activeScenario.secondSystem) {
           const secondPt = this._map.latLngToContainerPoint([activeScenario.secondSystem.lat, activeScenario.secondSystem.lon]);
           this._drawVortex(ctx, secondPt.x, secondPt.y, activeScenario.secondSystem.wind, false, this._angle * 0.7);
@@ -948,7 +1051,6 @@
       },
 
       _drawVortex: function(ctx, cx, cy, windSpeed, isGradCAM, angleOffset) {
-        // Base scale scales with zoom level
         const zoom = this._map.getZoom();
         const radiusScale = Math.pow(2, zoom - 5) * (0.8 + windSpeed / 120);
         const maxRadius = Math.max(70, Math.min(450, 180 * radiusScale));
@@ -971,7 +1073,6 @@
         ctx.fill();
         ctx.restore();
 
-        // Spiral arms count & logarithmic parameters
         const arms = 6;
         const totalPoints = 90;
 
@@ -981,7 +1082,7 @@
           for (let i = 0; i < totalPoints; i += 3) {
             const progress = i / totalPoints;
             const r = Math.pow(progress, 1.4) * maxRadius;
-            const theta = armAngleOffset - progress * 4.5 * Math.PI; // Counter-clockwise Northern Hemisphere cyclonic spiral
+            const theta = armAngleOffset - progress * 4.5 * Math.PI;
 
             const x = r * Math.cos(theta);
             const y = r * Math.sin(theta);
@@ -990,46 +1091,29 @@
             const radGrad = ctx.createRadialGradient(x, y, 0, x, y, blobSize);
 
             if (isGradCAM) {
-              // ==========================================
-              // WITH GRAD-CAM: AI Deep Convective Heatmap
-              // Core eyewall = deep intense red/crimson
-              // Middle feeder bands = orange/yellow
-              // Outer clouds = cyan/blue
-              // ==========================================
               if (progress < 0.25) {
-                // Peak convective core (eyewall)
-                radGrad.addColorStop(0, "rgba(239, 68, 68, 0.95)");  // Deep red
-                radGrad.addColorStop(0.4, "rgba(249, 115, 22, 0.8)"); // Vivid orange
+                radGrad.addColorStop(0, "rgba(239, 68, 68, 0.95)");
+                radGrad.addColorStop(0.4, "rgba(249, 115, 22, 0.8)");
                 radGrad.addColorStop(1, "rgba(249, 115, 22, 0)");
               } else if (progress < 0.6) {
-                // Secondary convective feeder bands
-                radGrad.addColorStop(0, "rgba(234, 179, 8, 0.75)");  // Yellow/Amber
-                radGrad.addColorStop(0.5, "rgba(16, 185, 129, 0.45)"); // Emerald/Teal
+                radGrad.addColorStop(0, "rgba(234, 179, 8, 0.75)");
+                radGrad.addColorStop(0.5, "rgba(16, 185, 129, 0.45)");
                 radGrad.addColorStop(1, "rgba(16, 185, 129, 0)");
               } else {
-                // Outer cirrus shield
-                radGrad.addColorStop(0, "rgba(56, 189, 248, 0.4)");  // Sky blue
+                radGrad.addColorStop(0, "rgba(56, 189, 248, 0.4)");
                 radGrad.addColorStop(0.7, "rgba(59, 130, 246, 0.15)");
                 radGrad.addColorStop(1, "rgba(59, 130, 246, 0)");
               }
             } else {
-              // ==========================================
-              // WITHOUT GRAD-CAM: Realistic Satellite Infrared (10.8µm)
-              // Crisp cold cloud tops: white/grey/silver
-              // Matching Reference Image 1 & 3 INSAT style!
-              // ==========================================
               if (progress < 0.25) {
-                // Dense opaque eyewall cirrus
                 radGrad.addColorStop(0, "rgba(255, 255, 255, 0.92)");
                 radGrad.addColorStop(0.5, "rgba(226, 232, 240, 0.75)");
                 radGrad.addColorStop(1, "rgba(226, 232, 240, 0)");
               } else if (progress < 0.6) {
-                // Dense spiral cloud bands
                 radGrad.addColorStop(0, "rgba(203, 213, 225, 0.75)");
                 radGrad.addColorStop(0.6, "rgba(148, 163, 184, 0.45)");
                 radGrad.addColorStop(1, "rgba(148, 163, 184, 0)");
               } else {
-                // Outer diffuse cirrus canopy
                 radGrad.addColorStop(0, "rgba(148, 163, 184, 0.4)");
                 radGrad.addColorStop(0.8, "rgba(100, 116, 139, 0.15)");
                 radGrad.addColorStop(1, "rgba(100, 116, 139, 0)");
@@ -1043,11 +1127,10 @@
           }
         }
 
-        // Inner Eye Cavity (Calm central eye)
         const eyeRadius = Math.max(6, 16 * radiusScale);
         ctx.beginPath();
         ctx.arc(0, 0, eyeRadius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(10, 15, 30, 0.85)"; // Clear eye
+        ctx.fillStyle = "rgba(10, 15, 30, 0.85)";
         ctx.fill();
 
         ctx.restore();
@@ -1058,187 +1141,109 @@
     cycloneCloudLayer.addTo(map);
 
     // =========================================================================
-    // 5. Trajectory Engine: RED DOTTED LINE for Predicted Movement
+    // 5. Dynamic Sensory Data Interpolation Across Time Steps (Live & Future Push)
     // =========================================================================
-    function renderTrajectoryAndMarkers() {
-      trajectoryLayer.clearLayers();
-      dangerRadiiLayer.clearLayers();
-      targetMarkersLayer.clearLayers();
-
-      // DO NOT DRAW TRAJECTORY IF SIMULATION HAS NOT STARTED
-      if (!isSimulationStarted) return;
-
-      const pred = activeScenario.pred;
+    function getSensoryDataAtTime(t) {
       const obs = activeScenario.obs;
+      const pred = activeScenario.pred;
 
-      // ----------------------------------------------------
-      // A. OBSERVED PAST TRACK (Solid Cyan Line: -18h to 0h)
-      // ----------------------------------------------------
-      const pastCoords = pred.pastTrack.map(pt => [pt.lat, pt.lon]);
-      const pastPolyline = L.polyline(pastCoords, {
-        color: "#38BDF8",
-        weight: 3.5,
-        opacity: 0.9,
-        lineCap: "round"
-      });
-      trajectoryLayer.addLayer(pastPolyline);
+      if (t === 0) {
+        // PRESENT LIVE OBSERVATION STATE
+        return {
+          timeLabel: "LIVE (T=0h)",
+          isLive: true,
+          wind: obs.wind,
+          gust: obs.gust,
+          pressure: obs.pressure,
+          drop: obs.drop,
+          sst: obs.sst,
+          eye: obs.eye,
+          symmetry: obs.symmetry,
+          rh: obs.rh,
+          shear: obs.shear,
+          speed: obs.speed,
+          frame: obs.frame
+        };
+      } else if (t > 0) {
+        // FUTURE PROJECTED TIME STEP (+3h, +6h, +12h, etc.)
+        const waypoints = [{ time: "0h", lat: obs.lat, lon: obs.lon, wind: obs.wind, pressure: obs.pressure }, ...pred.waypoints];
+        let w1 = waypoints[0], w2 = waypoints[waypoints.length - 1];
+        let ratio = 0;
 
-      // Past Waypoint Markers
-      pred.pastTrack.forEach(pt => {
-        const marker = L.circleMarker([pt.lat, pt.lon], {
-          radius: 4,
-          color: "#0284C7",
-          weight: 2,
-          fillColor: "#38BDF8",
-          fillOpacity: 1
-        });
-        marker.bindTooltip(`<b>Past: ${pt.time}</b><br>Lat: ${pt.lat}°N, Lon: ${pt.lon}°E<br>Wind: ${pt.wind} kt`, {
-          className: "bg-slate-900 border border-cyan-500/50 text-cyan-200 text-xs px-2 py-1 rounded shadow-lg"
-        });
-        trajectoryLayer.addLayer(marker);
-      });
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const h1 = parseInt(waypoints[i].time);
+          const h2 = parseInt(waypoints[i + 1].time);
+          if (t >= h1 && t <= h2) {
+            w1 = waypoints[i];
+            w2 = waypoints[i + 1];
+            ratio = (h2 === h1) ? 0 : (t - h1) / (h2 - h1);
+            break;
+          }
+        }
+        const currentWind = Math.round(w1.wind + (w2.wind - w1.wind) * ratio);
+        const currentPres = Math.round(w1.pressure + (w2.pressure - w1.pressure) * ratio);
+        const presDelta = currentPres - obs.pressure;
 
-      // ----------------------------------------------------
-      // B. PREDICTED MOVEMENT PATH: THE RED DOTTED LINE!
-      // ----------------------------------------------------
-      const predCoords = [[obs.lat, obs.lon], ...pred.waypoints.map(w => [w.lat, w.lon])];
-      
-      const predDottedPolyline = L.polyline(predCoords, {
-        color: "#EF4444",
-        weight: 4.5,
-        opacity: 1,
-        dashArray: "8, 10",
-        lineCap: "round",
-        className: "red-dotted-track"
-      });
-      trajectoryLayer.addLayer(predDottedPolyline);
+        // Physical evolution along forecast track
+        const prog = Math.min(1.0, t / 24.0);
+        const sst = Number((obs.sst - prog * 0.7).toFixed(1));
+        const eye = Math.max(16, Math.round(obs.eye - prog * 8));
+        const symmetry = Math.min(98, Math.round(obs.symmetry + prog * 8));
+        const rh = Math.min(96, Math.round(obs.rh + prog * 6));
+        const shear = Number(Math.max(4.0, (obs.shear - prog * 1.5)).toFixed(1));
+        const speed = Math.round(obs.speed + prog * 4);
 
-      // Forecast Cone of Uncertainty (Expanding Red/Amber Polygon)
-      if (document.getElementById("chkCone").checked) {
-        const coneLeft = [];
-        const coneRight = [];
-        pred.waypoints.forEach((w, idx) => {
-          const spreadKm = 25 + (idx + 1) * 22; // Expanding error margin
-          const deltaLat = spreadKm / 111.0;
-          const deltaLon = spreadKm / (111.0 * Math.cos(w.lat * Math.PI / 180));
-          coneLeft.push([w.lat + deltaLat * 0.7, w.lon - deltaLon * 0.7]);
-          coneRight.unshift([w.lat - deltaLat * 0.7, w.lon + deltaLon * 0.7]);
-        });
-        const conePolygonCoords = [[obs.lat, obs.lon], ...coneLeft, ...coneRight];
-        const conePolygon = L.polygon(conePolygonCoords, {
-          color: "#EF4444",
-          weight: 1.5,
-          dashArray: "4, 6",
-          fillColor: "#EF4444",
-          fillOpacity: 0.12
-        });
-        trajectoryLayer.addLayer(conePolygon);
-      }
+        return {
+          timeLabel: `PROJECTED (+${t}h)`,
+          isLive: false,
+          wind: currentWind,
+          gust: Math.round(currentWind * 1.3),
+          pressure: currentPres,
+          drop: `${presDelta >= 0 ? "+" : ""}${presDelta} hPa (vs Live)`,
+          sst: sst,
+          eye: eye,
+          symmetry: symmetry,
+          rh: rh,
+          shear: shear,
+          speed: speed,
+          frame: `INSAT-3D +${t}h Evolved`
+        };
+      } else {
+        // PAST OBSERVED STEP (-18h to 0h)
+        const track = pred.pastTrack;
+        let p1 = track[0], p2 = track[track.length - 1];
+        let ratio = 0;
+        for (let i = 0; i < track.length - 1; i++) {
+          const h1 = parseInt(track[i].time);
+          const h2 = parseInt(track[i + 1].time);
+          if (t >= h1 && t <= h2) {
+            p1 = track[i];
+            p2 = track[i + 1];
+            ratio = (h2 === h1) ? 0 : (t - h1) / (h2 - h1);
+            break;
+          }
+        }
+        const currentWind = Math.round(p1.wind + (p2.wind - p1.wind) * ratio);
+        const presEstimate = Math.round(1005 - (currentWind * 0.65));
 
-      // Predicted Waypoint Nodes (+3h, +6h, +9h, +12h, +18h, +24h)
-      pred.waypoints.forEach((w, idx) => {
-        const node = L.circleMarker([w.lat, w.lon], {
-          radius: 5.5,
-          color: "#B91C1C",
-          weight: 2,
-          fillColor: "#EF4444",
-          fillOpacity: 1
-        });
-        
-        node.bindTooltip(`
-          <div class="text-[11px] font-mono leading-tight">
-            <span class="font-bold text-red-400 block">${w.time} Forecast</span>
-            <span>Coord: <b>${w.lat}°N, ${w.lon}°E</b></span><br>
-            <span>Wind: <b class="text-amber-400">${w.wind} kt</b></span><br>
-            <span>Pressure: <b class="text-emerald-400">${w.pressure} hPa</b></span>
-          </div>
-        `, {
-          permanent: false,
-          direction: "top",
-          className: "bg-slate-950 border border-red-500/70 text-slate-100 p-2 rounded-lg shadow-2xl"
-        });
-        trajectoryLayer.addLayer(node);
-      });
-
-      // ----------------------------------------------------
-      // C. DANGER RADII (R30 Gale Wind & R50 Eyewall Danger)
-      // ----------------------------------------------------
-      if (document.getElementById("chkRadii").checked) {
-        // R30 Gale danger radius (in meters)
-        const r30Circle = L.circle([obs.lat, obs.lon], {
-          radius: pred.r30 * 1000,
-          color: "#EAB308",
-          weight: 1.5,
-          dashArray: "6, 6",
-          fillColor: "#EAB308",
-          fillOpacity: 0.06
-        });
-        dangerRadiiLayer.addLayer(r30Circle);
-
-        // R50 Destructive storm core radius (in meters)
-        const r50Circle = L.circle([obs.lat, obs.lon], {
-          radius: pred.r50 * 1000,
-          color: "#EF4444",
-          weight: 2,
-          dashArray: "4, 4",
-          fillColor: "#EF4444",
-          fillOpacity: 0.12
-        });
-        dangerRadiiLayer.addLayer(r50Circle);
-      }
-
-      // ----------------------------------------------------
-      // D. EYE TARGET CALLOUT (Matching Reference Images 1 & 3)
-      // Red target circle with arrow pointing to storm name
-      // ----------------------------------------------------
-      const currentPos = getPositionAtTime(currentTimeStep);
-      
-      const targetIcon = L.divIcon({
-        className: "custom-target-marker",
-        html: `
-          <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-            <!-- Pulsing outer ring -->
-            <div class="absolute -inset-4 rounded-full border-2 border-red-500 eye-pulse-ring"></div>
-            <!-- Main Target Circle around the eye -->
-            <div class="w-10 h-10 rounded-full border-2 border-red-500 bg-red-600/25 flex items-center justify-center shadow-lg shadow-red-500/50">
-              <div class="w-2 h-2 rounded-full bg-red-500"></div>
-            </div>
-            <!-- Connecting Arrow pointer & Callout Label (matching Ref Image 1 & 3) -->
-            <div class="ml-2 pl-2 border-l-2 border-red-500 text-red-500 font-extrabold text-sm font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
-              ${activeScenario.name.replace("Cyclonic Storm ", "").replace("Super Cyclone ", "").replace("Extremely Severe Cyclone ", "")}
-            </div>
-          </div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-      });
-
-      const eyeMarker = L.marker([currentPos.lat, currentPos.lon], { icon: targetIcon });
-      targetMarkersLayer.addLayer(eyeMarker);
-
-      // If dual-system scenario, add yellow target marker for Senyar
-      if (activeScenarioKey === "dual_vortex" && activeScenario.secondSystem) {
-        const sec = activeScenario.secondSystem;
-        const secondTargetIcon = L.divIcon({
-          className: "custom-second-target",
-          html: `
-            <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-              <div class="w-9 h-9 rounded-full border-2 border-yellow-400 bg-yellow-500/20 flex items-center justify-center shadow-lg shadow-yellow-500/40">
-                <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
-              </div>
-              <div class="ml-2 pl-2 border-l-2 border-yellow-400 text-yellow-400 font-bold text-xs font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
-                Senyar
-              </div>
-            </div>
-          `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18]
-        });
-        targetMarkersLayer.addLayer(L.marker([sec.lat, sec.lon], { icon: secondTargetIcon }));
+        return {
+          timeLabel: `PAST ARCHIVE (${t}h)`,
+          isLive: false,
+          wind: currentWind,
+          gust: Math.round(currentWind * 1.25),
+          pressure: presEstimate,
+          drop: "Observed Historical",
+          sst: Number((obs.sst + 0.3).toFixed(1)),
+          eye: Math.round(obs.eye + 10),
+          symmetry: Math.round(obs.symmetry - 10),
+          rh: Math.round(obs.rh - 5),
+          shear: Number((obs.shear + 2.0).toFixed(1)),
+          speed: obs.speed,
+          frame: `INSAT-3D Historical (${t}h)`
+        };
       }
     }
 
-    // Helper: Interpolate storm position at scrubbed time
     function getPositionAtTime(t) {
       const pred = activeScenario.pred;
       const obs = activeScenario.obs;
@@ -1246,7 +1251,6 @@
       if (t === 0) return { lat: obs.lat, lon: obs.lon };
 
       if (t < 0) {
-        // Interpolate along past track
         const track = pred.pastTrack;
         const targetHours = t;
         let p1 = track[0], p2 = track[track.length - 1];
@@ -1266,7 +1270,6 @@
         }
         return { lat: track[0].lat, lon: track[0].lon };
       } else {
-        // Interpolate along predicted waypoints
         const waypoints = [{ time: "0h", lat: obs.lat, lon: obs.lon }, ...pred.waypoints];
         for (let i = 0; i < waypoints.length - 1; i++) {
           const h1 = parseInt(waypoints[i].time);
@@ -1285,7 +1288,196 @@
     }
 
     // =========================================================================
-    // 6. Sidebar Data Population: Standby Mode (N/A) vs Active Simulation Values
+    // 6. Trajectory Engine: RED DOTTED LINE & Landfall Location Marker
+    // =========================================================================
+    function renderTrajectoryAndMarkers() {
+      trajectoryLayer.clearLayers();
+      dangerRadiiLayer.clearLayers();
+      targetMarkersLayer.clearLayers();
+
+      if (!isSimulationStarted) return;
+
+      const pred = activeScenario.pred;
+      const obs = activeScenario.obs;
+      const landfall = pred.landfall || {};
+
+      // A. OBSERVED PAST TRACK (Solid Cyan Line: -18h to 0h)
+      const pastCoords = pred.pastTrack.map(pt => [pt.lat, pt.lon]);
+      const pastPolyline = L.polyline(pastCoords, {
+        color: "#38BDF8",
+        weight: 3.5,
+        opacity: 0.9,
+        lineCap: "round"
+      });
+      trajectoryLayer.addLayer(pastPolyline);
+
+      pred.pastTrack.forEach(pt => {
+        const marker = L.circleMarker([pt.lat, pt.lon], {
+          radius: 4,
+          color: "#0284C7",
+          weight: 2,
+          fillColor: "#38BDF8",
+          fillOpacity: 1
+        });
+        marker.bindTooltip(`<b>Past: ${pt.time}</b><br>Lat: ${pt.lat}°N, Lon: ${pt.lon}°E<br>Wind: ${pt.wind} kt`, {
+          className: "bg-slate-900 border border-cyan-500/50 text-cyan-200 text-xs px-2 py-1 rounded shadow-lg"
+        });
+        trajectoryLayer.addLayer(marker);
+      });
+
+      // B. PREDICTED MOVEMENT PATH: THE RED DOTTED LINE!
+      const predCoords = [[obs.lat, obs.lon], ...pred.waypoints.map(w => [w.lat, w.lon])];
+      
+      const predDottedPolyline = L.polyline(predCoords, {
+        color: "#EF4444",
+        weight: 4.5,
+        opacity: 1,
+        dashArray: "8, 10",
+        lineCap: "round",
+        className: "red-dotted-track"
+      });
+      trajectoryLayer.addLayer(predDottedPolyline);
+
+      // Forecast Cone of Uncertainty
+      if (document.getElementById("chkCone").checked) {
+        const coneLeft = [];
+        const coneRight = [];
+        pred.waypoints.forEach((w, idx) => {
+          const spreadKm = 25 + (idx + 1) * 22;
+          const deltaLat = spreadKm / 111.0;
+          const deltaLon = spreadKm / (111.0 * Math.cos(w.lat * Math.PI / 180));
+          coneLeft.push([w.lat + deltaLat * 0.7, w.lon - deltaLon * 0.7]);
+          coneRight.unshift([w.lat - deltaLat * 0.7, w.lon + deltaLon * 0.7]);
+        });
+        const conePolygonCoords = [[obs.lat, obs.lon], ...coneLeft, ...coneRight];
+        const conePolygon = L.polygon(conePolygonCoords, {
+          color: "#EF4444",
+          weight: 1.5,
+          dashArray: "4, 6",
+          fillColor: "#EF4444",
+          fillOpacity: 0.12
+        });
+        trajectoryLayer.addLayer(conePolygon);
+      }
+
+      // Predicted Waypoint Nodes
+      pred.waypoints.forEach((w) => {
+        const isCurrentStep = (currentTimeStep > 0 && parseInt(w.time) === currentTimeStep);
+        const node = L.circleMarker([w.lat, w.lon], {
+          radius: isCurrentStep ? 8 : 5.5,
+          color: isCurrentStep ? "#F59E0B" : "#B91C1C",
+          weight: isCurrentStep ? 3 : 2,
+          fillColor: isCurrentStep ? "#F59E0B" : "#EF4444",
+          fillOpacity: 1
+        });
+        
+        node.bindTooltip(`
+          <div class="text-[11px] font-mono leading-tight">
+            <span class="font-bold text-red-400 block">${w.time} Forecast</span>
+            <span>Coord: <b>${w.lat}°N, ${w.lon}°E</b></span><br>
+            <span>Wind: <b class="text-amber-400">${w.wind} kt</b></span><br>
+            <span>Pressure: <b class="text-emerald-400">${w.pressure} hPa</b></span>
+          </div>
+        `, {
+          permanent: false,
+          direction: "top",
+          className: "bg-slate-950 border border-red-500/70 text-slate-100 p-2 rounded-lg shadow-2xl"
+        });
+        trajectoryLayer.addLayer(node);
+      });
+
+      // C. DANGER RADII
+      if (document.getElementById("chkRadii").checked) {
+        const currentCoord = getPositionAtTime(currentTimeStep);
+        const r30Circle = L.circle([currentCoord.lat, currentCoord.lon], {
+          radius: pred.r30 * 1000,
+          color: "#EAB308",
+          weight: 1.5,
+          dashArray: "6, 6",
+          fillColor: "#EAB308",
+          fillOpacity: 0.06
+        });
+        dangerRadiiLayer.addLayer(r30Circle);
+
+        const r50Circle = L.circle([currentCoord.lat, currentCoord.lon], {
+          radius: pred.r50 * 1000,
+          color: "#EF4444",
+          weight: 2,
+          dashArray: "4, 4",
+          fillColor: "#EF4444",
+          fillOpacity: 0.12
+        });
+        dangerRadiiLayer.addLayer(r50Circle);
+      }
+
+      // D. EYE TARGET CALLOUT (Tracks scrubbed position)
+      const currentPos = getPositionAtTime(currentTimeStep);
+      const isLiveStep = (currentTimeStep === 0);
+      
+      const targetIcon = L.divIcon({
+        className: "custom-target-marker",
+        html: `
+          <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+            <div class="absolute -inset-4 rounded-full border-2 ${isLiveStep ? "border-red-500 eye-pulse-ring" : "border-cyan-400"}"></div>
+            <div class="w-10 h-10 rounded-full border-2 ${isLiveStep ? "border-red-500 bg-red-600/25" : "border-cyan-400 bg-cyan-600/25"} flex items-center justify-center shadow-lg">
+              <div class="w-2.5 h-2.5 rounded-full ${isLiveStep ? "bg-red-500" : "bg-cyan-400"}"></div>
+            </div>
+            <div class="ml-2 pl-2 border-l-2 ${isLiveStep ? "border-red-500 text-red-500" : "border-cyan-400 text-cyan-400"} font-extrabold text-sm font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
+              ${activeScenario.name.replace("Cyclonic Storm ", "").replace("Super Cyclone ", "").replace("Extremely Severe Cyclone ", "")}
+              <span class="text-xs block font-mono font-normal opacity-90">${currentPos.lat.toFixed(1)}°N, ${currentPos.lon.toFixed(1)}°E [${currentTimeStep >= 0 ? "+" + currentTimeStep : currentTimeStep}h]</span>
+            </div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      targetMarkersLayer.addLayer(L.marker([currentPos.lat, currentPos.lon], { icon: targetIcon }));
+
+      // E. COASTAL LANDFALL LOCATION MARKER ON MAP
+      if (landfall.lat && landfall.lon) {
+        const landfallIcon = L.divIcon({
+          className: "custom-landfall-marker",
+          html: `
+            <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+              <div class="w-8 h-8 rounded-full border-2 border-dashed border-red-500 bg-red-950/80 flex items-center justify-center shadow-lg shadow-red-500/50">
+                <span class="text-sm">🚩</span>
+              </div>
+              <div class="ml-1.5 px-2 py-0.5 rounded bg-red-950/90 border border-red-500 text-white font-mono text-[10px] font-bold shadow whitespace-nowrap">
+                LANDFALL: ${landfall.coords} (ETA: ${landfall.eta})
+              </div>
+            </div>
+          `,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+        targetMarkersLayer.addLayer(L.marker([landfall.lat, landfall.lon], { icon: landfallIcon }));
+      }
+
+      // If dual-system scenario, add yellow target marker for Senyar
+      if (activeScenarioKey === "dual_vortex" && activeScenario.secondSystem) {
+        const sec = activeScenario.secondSystem;
+        const secondTargetIcon = L.divIcon({
+          className: "custom-second-target",
+          html: `
+            <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+              <div class="w-9 h-9 rounded-full border-2 border-yellow-400 bg-yellow-500/20 flex items-center justify-center shadow-lg shadow-yellow-500/40">
+                <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+              </div>
+              <div class="ml-2 pl-2 border-l-2 border-yellow-400 text-yellow-400 font-bold text-xs font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
+                Senyar (3.6°N, 99.8°E)
+              </div>
+            </div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        });
+        targetMarkersLayer.addLayer(L.marker([sec.lat, sec.lon], { icon: secondTargetIcon }));
+      }
+    }
+
+    // =========================================================================
+    // 7. Sidebar Data Population: Standby Mode (N/A) vs Active Simulation Values
     // =========================================================================
     function setStandbyState() {
       isSimulationStarted = false;
@@ -1299,6 +1491,11 @@
       // Show Standby Banner
       const banner = document.getElementById("standbyBanner");
       if (banner) banner.classList.remove("hidden");
+
+      // Reset Header
+      document.getElementById("liveSensoryHeaderTitle").innerText = "Live Sensory Observation Data";
+      document.getElementById("liveSensoryHeaderTitle").className = "text-xs font-bold uppercase tracking-wider text-emerald-400";
+      document.getElementById("liveDotIndicator").className = "w-2.5 h-2.5 rounded-full bg-slate-500";
 
       // Status badges
       document.getElementById("telemetryStatusChip").innerText = "STANDBY (OFFLINE)";
@@ -1336,11 +1533,9 @@
       document.getElementById("liveSpeedVal").innerText = "N/A";
       document.getElementById("liveFrameId").innerText = "STANDBY";
 
-      // PART 2: PREDICTED DATA -> SHOW N/A
-      document.getElementById("predConfidence").innerText = "Awaiting Simulation";
+      // PART 2: PREDICTED DATA -> SHOW N/A (Confidence Meter Removed)
       document.getElementById("predCategory").innerText = "STANDBY";
       document.getElementById("predCategoryCode").innerText = "N/A";
-      document.getElementById("probBar").style.width = "0%";
       document.getElementById("predWindVal").innerText = "N/A";
       document.getElementById("predWindDelta").innerText = "(N/A)";
       document.getElementById("predWind12h").innerText = "N/A";
@@ -1349,9 +1544,19 @@
       document.getElementById("predTrendLabel").innerText = "STANDBY";
       document.getElementById("predR30Val").innerText = "N/A";
       document.getElementById("predR50Val").innerText = "N/A";
+
+      // COASTLINE LANDFALL LOCATION & SENSORY DATA -> SHOW N/A
       document.getElementById("predLandfallProb").innerText = "N/A";
       document.getElementById("predLandfallTarget").innerText = "Awaiting Simulation Start";
+      document.getElementById("landfallCoords").innerText = "N/A";
       document.getElementById("predLandfallEta").innerText = "N/A";
+      document.getElementById("landfallCategory").innerText = "N/A";
+      document.getElementById("landfallWindVal").innerText = "N/A";
+      document.getElementById("landfallGustVal").innerText = "Gust: N/A";
+      document.getElementById("landfallPressureVal").innerText = "N/A";
+      document.getElementById("landfallSurgeVal").innerText = "N/A";
+      document.getElementById("landfallR30Val").innerText = "N/A";
+      document.getElementById("landfallR50Val").innerText = "N/A";
 
       // Predicted Waypoints Table
       document.getElementById("predictedWaypointsBody").innerHTML = `
@@ -1366,7 +1571,6 @@
       targetMarkersLayer.clearLayers();
       quadrantsLayer.clearLayers();
 
-      // Reset timeline
       currentTimeStep = 0;
       document.getElementById("timeSlider").value = 0;
       document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
@@ -1389,8 +1593,6 @@
       if (banner) banner.classList.add("hidden");
 
       // Status badges
-      document.getElementById("telemetryStatusChip").innerText = "TELEMETRY STREAM";
-      document.getElementById("telemetryStatusChip").className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
       document.getElementById("insatBadge").innerText = "10.8µm LOCKED";
       document.getElementById("insatBadge").className = "text-emerald-400 font-semibold";
       document.getElementById("buoyBadge").innerText = "AWS SYNCED";
@@ -1425,13 +1627,41 @@
     function updateSidebarData() {
       if (!isSimulationStarted) return;
 
+      const currentSensory = getSensoryDataAtTime(currentTimeStep);
       const obs = activeScenario.obs;
       const pred = activeScenario.pred;
+      const landfall = pred.landfall || {};
+
+      // Dynamic Header Title & Badge depending on whether looking at Live (0h) or Future (+3h/+6h)
+      const headerTitle = document.getElementById("liveSensoryHeaderTitle");
+      const dotIndicator = document.getElementById("liveDotIndicator");
+      const statusChip = document.getElementById("telemetryStatusChip");
+
+      if (currentTimeStep === 0) {
+        headerTitle.innerText = "Live Sensory Observation Data (Present: T=0h)";
+        headerTitle.className = "text-xs font-bold uppercase tracking-wider text-emerald-400";
+        dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot";
+        statusChip.innerText = "LIVE TELEMETRY STREAM";
+        statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
+      } else if (currentTimeStep > 0) {
+        headerTitle.innerText = `Sensory State Evolvement (+${currentTimeStep}h Projected)`;
+        headerTitle.className = "text-xs font-bold uppercase tracking-wider text-cyan-400";
+        dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse";
+        statusChip.innerText = `+${currentTimeStep}h PROJECTED SENSORS`;
+        statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20";
+      } else {
+        headerTitle.innerText = `Observed Past Sensory Telemetry (${currentTimeStep}h Archive)`;
+        headerTitle.className = "text-xs font-bold uppercase tracking-wider text-slate-300";
+        dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-slate-400";
+        statusChip.innerText = `PAST ${currentTimeStep}h ARCHIVE`;
+        statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
+      }
 
       // Top Target Callout Banner
       document.getElementById("targetStormName").innerText = activeScenario.name;
       document.getElementById("targetStormBadge").innerText = activeScenario.catCode;
-      document.getElementById("targetCoords").innerText = `${obs.lat.toFixed(1)}°N / ${obs.lon.toFixed(1)}°E`;
+      const currentPos = getPositionAtTime(currentTimeStep);
+      document.getElementById("targetCoords").innerText = `${currentPos.lat.toFixed(1)}°N / ${currentPos.lon.toFixed(1)}°E`;
       document.getElementById("targetBasin").innerText = activeScenario.basin;
 
       // Second target card visibility for dual vortex
@@ -1442,25 +1672,23 @@
         secCard.classList.add("hidden");
       }
 
-      // --- PART 1: LIVE SENSORY DATA ---
-      document.getElementById("liveWindVal").innerText = obs.wind;
-      document.getElementById("liveWindKmh").innerText = `(${Math.round(obs.wind * 1.852)} km/h)`;
-      document.getElementById("liveGustVal").innerText = `${obs.gust} kt`;
-      document.getElementById("livePressureVal").innerText = obs.pressure;
-      document.getElementById("livePressureDrop").innerText = obs.drop;
-      document.getElementById("liveSstVal").innerText = obs.sst;
-      document.getElementById("liveEyeVal").innerText = obs.eye;
-      document.getElementById("liveSymmetryVal").innerText = `${obs.symmetry}%`;
-      document.getElementById("liveRhVal").innerText = `${obs.rh}%`;
-      document.getElementById("liveShearVal").innerText = `${obs.shear} kt`;
-      document.getElementById("liveSpeedVal").innerText = `${obs.speed} km/h`;
-      document.getElementById("liveFrameId").innerText = obs.frame;
+      // --- PART 1: SENSORY OBSERVATION & EVOLVEMENT (Updates with 3h, 6h, etc.) ---
+      document.getElementById("liveWindVal").innerText = currentSensory.wind;
+      document.getElementById("liveWindKmh").innerText = `(${Math.round(currentSensory.wind * 1.852)} km/h)`;
+      document.getElementById("liveGustVal").innerText = `${currentSensory.gust} kt`;
+      document.getElementById("livePressureVal").innerText = currentSensory.pressure;
+      document.getElementById("livePressureDrop").innerText = currentSensory.drop;
+      document.getElementById("liveSstVal").innerText = currentSensory.sst;
+      document.getElementById("liveEyeVal").innerText = currentSensory.eye;
+      document.getElementById("liveSymmetryVal").innerText = `${currentSensory.symmetry}%`;
+      document.getElementById("liveRhVal").innerText = `${currentSensory.rh}%`;
+      document.getElementById("liveShearVal").innerText = `${currentSensory.shear} kt`;
+      document.getElementById("liveSpeedVal").innerText = `${currentSensory.speed} km/h`;
+      document.getElementById("liveFrameId").innerText = currentSensory.frame;
 
       // --- PART 2: PREDICTED DATA ---
-      document.getElementById("predConfidence").innerText = `${activeScenario.confidence} Confidence`;
       document.getElementById("predCategory").innerText = activeScenario.catName;
       document.getElementById("predCategoryCode").innerText = activeScenario.catCode;
-      document.getElementById("probBar").style.width = "98.5%";
 
       document.getElementById("predWindVal").innerText = pred.wind;
       document.getElementById("predWindDelta").innerText = `(${pred.deltaWind})`;
@@ -1473,19 +1701,39 @@
       document.getElementById("predR30Val").innerText = pred.r30;
       document.getElementById("predR50Val").innerText = pred.r50;
 
-      document.getElementById("predLandfallProb").innerText = pred.landfallProb;
-      document.getElementById("predLandfallTarget").innerText = pred.target;
-      document.getElementById("predLandfallEta").innerText = pred.eta;
+      // --- COASTLINE LANDFALL LOCATION & SENSORY DATA WHEN IT HITS ---
+      document.getElementById("predLandfallProb").innerText = `${landfall.prob || "92.0%"} Prob`;
+      document.getElementById("predLandfallTarget").innerText = landfall.target || "Coastal Zone";
+      document.getElementById("landfallCoords").innerText = landfall.coords || "N/A";
+      document.getElementById("predLandfallEta").innerText = landfall.eta || "24.0 hrs";
+      document.getElementById("landfallCategory").innerText = activeScenario.catName;
+
+      document.getElementById("landfallWindVal").innerText = `${landfall.wind || pred.wind} kt`;
+      document.getElementById("landfallGustVal").innerText = `Gust: ${landfall.gust || Math.round((landfall.wind || pred.wind) * 1.3)} kt`;
+      document.getElementById("landfallPressureVal").innerText = `${landfall.pressure || pred.pressure} hPa`;
+      document.getElementById("landfallSurgeVal").innerText = landfall.surge || "2.5 - 3.5 m";
+      document.getElementById("landfallR30Val").innerText = `${landfall.r30 || pred.r30} km`;
+      document.getElementById("landfallR50Val").innerText = `${landfall.r50 || pred.r50} km`;
+
+      // Update quick push buttons styling
+      document.querySelectorAll(".time-quick-btn").forEach(btn => {
+        if (parseInt(btn.dataset.time) === currentTimeStep) {
+          btn.className = "time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono font-bold transition bg-blue-600 text-white shadow";
+        } else {
+          btn.className = "time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono transition text-slate-300 bg-slate-800 hover:text-white";
+        }
+      });
 
       // Populate Predicted Waypoints Table (Red Dotted Line Steps)
       const tbody = document.getElementById("predictedWaypointsBody");
       tbody.innerHTML = "";
       pred.waypoints.forEach(w => {
+        const isCurrentStep = (currentTimeStep > 0 && parseInt(w.time) === currentTimeStep);
         const row = document.createElement("tr");
-        row.className = "hover:bg-slate-800/40 transition";
+        row.className = isCurrentStep ? "bg-red-500/20 text-white font-bold" : "hover:bg-slate-800/40 transition";
         row.innerHTML = `
           <td class="py-1 text-red-400 font-bold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> ${w.time}
+            <span class="w-1.5 h-1.5 rounded-full ${isCurrentStep ? "bg-amber-400 animate-ping" : "bg-red-500"}"></span> ${w.time}
           </td>
           <td class="py-1">${w.lat.toFixed(1)}°N, ${w.lon.toFixed(1)}°E</td>
           <td class="py-1 text-right text-amber-400 font-semibold">${w.wind} kt</td>
@@ -1496,29 +1744,32 @@
     }
 
     // =========================================================================
-    // 7. Procedural Simulation of New Random Cyclone Occurrence
+    // 8. Procedural Simulation of New Random Cyclone Occurrence
     // =========================================================================
     function generateRandomOccurrence() {
-      // Pick randomly between Bay of Bengal (0) or Arabian Sea (1)
       const isBayOfBengal = Math.random() > 0.45;
       
-      let lat, lon, basin, targetCoast;
+      let lat, lon, basin, targetCoast, landfallLat, landfallLon;
       if (isBayOfBengal) {
-        lat = Number((5.5 + Math.random() * 11.0).toFixed(1)); // 5.5°N - 16.5°N
-        lon = Number((83.0 + Math.random() * 9.0).toFixed(1)); // 83.0°E - 92.0°E
+        lat = Number((5.5 + Math.random() * 11.0).toFixed(1));
+        lon = Number((83.0 + Math.random() * 9.0).toFixed(1));
         basin = "Bay of Bengal";
         targetCoast = ["Odisha Coast (Puri)", "Andhra Coast (Visakhapatnam)", "West Bengal (Sundarbans)", "Tamil Nadu (Chennai)"][Math.floor(Math.random() * 4)];
+        landfallLat = Number(Math.min(22.0, lat + 6.0).toFixed(1));
+        landfallLon = Number((lon - 4.5).toFixed(1));
       } else {
-        lat = Number((12.0 + Math.random() * 8.0).toFixed(1)); // 12.0°N - 20.0°N
-        lon = Number((65.0 + Math.random() * 6.5).toFixed(1)); // 65.0°E - 71.5°E
+        lat = Number((12.0 + Math.random() * 8.0).toFixed(1));
+        lon = Number((65.0 + Math.random() * 6.5).toFixed(1));
         basin = "Arabian Sea";
         targetCoast = ["Gujarat Coast (Veraval)", "Maharashtra Coast (Alibag)", "Kutch Coast (Kandla)", "Konkan Coast (Goa)"][Math.floor(Math.random() * 4)];
+        landfallLat = Number(Math.min(24.5, lat + 4.5).toFixed(1));
+        landfallLon = Number((lon + 4.0).toFixed(1));
       }
 
       const randomNames = ["Vayu", "Nisarga", "Gulab", "Asani", "Mandous", "Mocha", "Tej", "Hamoon", "Michaung", "Remal", "Dana"];
       const stormName = `Cyclonic Storm ${randomNames[Math.floor(Math.random() * randomNames.length)]} (Simulated)`;
 
-      const wind = Math.floor(40 + Math.random() * 65); // 40 - 105 kt
+      const wind = Math.floor(40 + Math.random() * 65);
       const pressure = Math.floor(1000 - (wind * 0.65));
       const gust = Math.floor(wind * 1.3);
 
@@ -1528,7 +1779,6 @@
       else if (wind >= 90 && wind < 120) { catName = "Extremely Severe Cyclonic Storm"; catCode = "ESCS"; }
       else if (wind >= 120) { catName = "Super Cyclonic Storm"; catCode = "SuCS"; }
 
-      // Generate future waypoints along a parabolic recurving trajectory
       const waypoints = [];
       const deltaLatStep = 0.5 + Math.random() * 0.4;
       const deltaLonStep = (isBayOfBengal ? -0.4 : 0.3) + (Math.random() * 0.3);
@@ -1545,7 +1795,6 @@
         });
       });
 
-      // Past track
       const pastTrack = [
         { time: "-18h", lat: Number((lat - deltaLatStep * 2.2).toFixed(1)), lon: Number((lon - deltaLonStep * 2.2).toFixed(1)), wind: Math.max(25, wind - 20) },
         { time: "-12h", lat: Number((lat - deltaLatStep * 1.5).toFixed(1)), lon: Number((lon - deltaLonStep * 1.5).toFixed(1)), wind: Math.max(30, wind - 14) },
@@ -1553,12 +1802,13 @@
         { time: "0h", lat: lat, lon: lon, wind: wind }
       ];
 
+      const finalWp = waypoints[waypoints.length - 1];
+
       return {
         name: stormName,
         basin: basin,
         catName: catName,
         catCode: catCode,
-        confidence: `${(96.0 + Math.random() * 3.8).toFixed(1)}%`,
         obs: {
           lat: lat, lon: lon,
           wind: wind, gust: gust,
@@ -1581,9 +1831,19 @@
           trend: wind > 64 ? "RAPID INTENSIFICATION" : "INTENSIFYING",
           r30: Math.floor(160 + wind * 0.9),
           r50: Math.floor(50 + wind * 0.4),
-          landfallProb: `${(85.0 + Math.random() * 14.5).toFixed(1)}%`,
-          eta: `${(15.0 + Math.random() * 18.0).toFixed(1)} hrs`,
-          target: targetCoast,
+          landfall: {
+            target: targetCoast,
+            coords: `${landfallLat}°N, ${landfallLon}°E`,
+            lat: landfallLat, lon: landfallLon,
+            eta: `${(15.0 + Math.random() * 18.0).toFixed(1)} hrs`,
+            prob: `${(85.0 + Math.random() * 14.5).toFixed(1)}%`,
+            wind: finalWp.wind,
+            gust: Math.floor(finalWp.wind * 1.3),
+            pressure: finalWp.pressure,
+            surge: `${(2.0 + Math.random() * 2.5).toFixed(1)} - ${(3.5 + Math.random() * 2.0).toFixed(1)} m`,
+            r30: Math.floor(180 + wind * 0.9),
+            r50: Math.floor(55 + wind * 0.4)
+          },
           waypoints: waypoints,
           pastTrack: pastTrack
         },
@@ -1593,7 +1853,7 @@
     }
 
     // =========================================================================
-    // 8. Event Listeners & Interactive Controls
+    // 9. Event Listeners & Interactive Controls
     // =========================================================================
     function switchScenario(key) {
       if (key === "random") {
@@ -1618,11 +1878,31 @@
           easeLinearity: 0.25
         });
       } else {
-        // In standby, simply pan map closer to selected storm without revealing values
         const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
         map.flyTo(center, activeScenario.zoom || 5, { duration: 0.8 });
       }
     }
+
+    // Future Push Quick Buttons Event Handlers
+    document.querySelectorAll(".time-quick-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetTime = parseInt(btn.dataset.time);
+        currentTimeStep = targetTime;
+        document.getElementById("timeSlider").value = targetTime;
+        if (targetTime === 0) {
+          document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
+        } else if (targetTime > 0) {
+          document.getElementById("timeStepLabel").innerText = `FORECAST (+${targetTime}h)`;
+        } else {
+          document.getElementById("timeStepLabel").innerText = `PAST (${targetTime}h)`;
+        }
+
+        if (isSimulationStarted) {
+          updateSidebarData();
+          renderTrajectoryAndMarkers();
+        }
+      });
+    });
 
     // Main Simulation Action Button Click Handler (Start / Stop)
     document.getElementById("btnSimulationAction").addEventListener("click", () => {
@@ -1689,6 +1969,7 @@
         timeStepLabel.innerText = `FORECAST (+${currentTimeStep}h)`;
       }
       if (isSimulationStarted) {
+        updateSidebarData();
         renderTrajectoryAndMarkers();
       }
     });
