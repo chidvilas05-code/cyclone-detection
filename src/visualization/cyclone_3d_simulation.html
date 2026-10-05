@@ -164,6 +164,12 @@
         <option value="random">🎲 Simulate New Random Occurrence</option>
       </select>
 
+      <!-- PRIMARY ACTION BUTTON: Start / Stop Simulation -->
+      <button id="btnSimulationAction" class="px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/30 border border-emerald-400/40 cursor-pointer" title="Click to start live telemetry & AI multi-task forecasting">
+        <span id="simBtnIcon" class="text-sm">🚀</span>
+        <span id="simBtnText">Start Simulation</span>
+      </button>
+
       <button id="btnResetView" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition" title="Center on Active Storm">
         🧭 Center Eye
       </button>
@@ -183,14 +189,14 @@
       <div class="absolute top-3 left-3 flex flex-col gap-2 z-[1000] pointer-events-none">
         
         <!-- Live Storm Target Banner (Styled exactly like Reference Images 1 & 3) -->
-        <div id="targetCalloutCard" class="bg-slate-950/90 border-2 border-red-600 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur">
+        <div id="targetCalloutCard" class="bg-slate-950/90 border-2 border-slate-700 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur">
           <div class="flex items-center justify-between gap-3">
-            <span id="targetStormName" class="font-mono font-bold text-xs text-red-500 uppercase tracking-wider">Cyclonic Storm Ditwah</span>
-            <span id="targetStormBadge" class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-red-600/30 text-red-300 border border-red-500">CS</span>
+            <span id="targetStormName" class="font-mono font-bold text-xs text-slate-400 uppercase tracking-wider">STANDBY (No Active Storm)</span>
+            <span id="targetStormBadge" class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700">N/A</span>
           </div>
           <div class="mt-1 flex items-baseline gap-2">
-            <span id="targetCoords" class="font-mono text-sm font-extrabold text-white">6.9°N / 87.9°E</span>
-            <span id="targetBasin" class="text-[10px] text-slate-400">South Bay of Bengal</span>
+            <span id="targetCoords" class="font-mono text-sm font-extrabold text-white">N/A</span>
+            <span id="targetBasin" class="text-[10px] text-slate-400">Awaiting Simulation Start</span>
           </div>
         </div>
 
@@ -261,9 +267,9 @@
 
       <!-- Active Mode Indicator Tag -->
       <div class="absolute top-3 right-3 z-[1000] pointer-events-none">
-        <div id="gradcamStatusBadge" class="bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-          <span id="gradcamStatusText">GRAD-CAM CONVECTIVE ATTENTION ACTIVE</span>
+        <div id="gradcamStatusBadge" class="bg-slate-900/85 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400 backdrop-blur shadow-lg flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span id="gradcamStatusText">SIMULATION STANDBY: CLICK 'START SIMULATION'</span>
         </div>
       </div>
     </div>
@@ -282,22 +288,33 @@
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot"></span>
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Live Sensory Observation Data</h2>
           </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">TELEMETRY STREAM</span>
+          <span id="telemetryStatusChip" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">STANDBY (OFFLINE)</span>
+        </div>
+
+        <!-- Standby Prompt Banner (Visible when Simulation is not running) -->
+        <div id="standbyBanner" class="mb-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-base">⚠️</span>
+            <span class="text-[11px] leading-tight">Simulation Standby (All values N/A). Click button to start telemetry stream.</span>
+          </div>
+          <button id="btnQuickStart" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase shrink-0 transition">
+            Start
+          </button>
         </div>
 
         <!-- Sensor Status Badges -->
         <div class="grid grid-cols-3 gap-1.5 mb-3 text-[10px] text-center font-mono">
           <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
             <span class="text-slate-400 block text-[9px]">INSAT-3D IR</span>
-            <span class="text-emerald-400 font-semibold">10.8µm LOCKED</span>
+            <span id="insatBadge" class="text-slate-500 font-semibold">STANDBY</span>
           </div>
           <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
             <span class="text-slate-400 block text-[9px]">OCEAN BUOY</span>
-            <span class="text-emerald-400 font-semibold">AWS SYNCED</span>
+            <span id="buoyBadge" class="text-slate-500 font-semibold">STANDBY</span>
           </div>
           <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
             <span class="text-slate-400 block text-[9px]">DOPPLER RADAR</span>
-            <span class="text-cyan-400 font-semibold">250km RANGE</span>
+            <span id="radarBadge" class="text-slate-500 font-semibold">STANDBY</span>
           </div>
         </div>
 
@@ -308,13 +325,13 @@
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 relative overflow-hidden">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Observed Wind Speed</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="liveWindVal" class="text-xl font-bold font-mono text-amber-400">45</span>
+              <span id="liveWindVal" class="text-xl font-bold font-mono text-amber-400">N/A</span>
               <span class="text-xs text-amber-400 font-mono">kt</span>
-              <span id="liveWindKmh" class="text-[11px] text-slate-400 font-mono ml-1">(83 km/h)</span>
+              <span id="liveWindKmh" class="text-[11px] text-slate-400 font-mono ml-1">(N/A)</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>Peak Gusts:</span>
-              <span id="liveGustVal" class="text-slate-200 font-mono font-semibold">60 kt</span>
+              <span id="liveGustVal" class="text-slate-200 font-mono font-semibold">N/A</span>
             </div>
           </div>
 
@@ -322,12 +339,12 @@
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 relative overflow-hidden">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Central Surface Pressure</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="livePressureVal" class="text-xl font-bold font-mono text-emerald-400">994</span>
+              <span id="livePressureVal" class="text-xl font-bold font-mono text-emerald-400">N/A</span>
               <span class="text-xs text-emerald-400 font-mono">hPa</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>Barometric Tendency:</span>
-              <span id="livePressureDrop" class="text-red-400 font-mono font-semibold">−3.8 hPa / 3h</span>
+              <span id="livePressureDrop" class="text-red-400 font-mono font-semibold">N/A</span>
             </div>
           </div>
 
@@ -335,7 +352,7 @@
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Sea Surface Temp (SST)</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="liveSstVal" class="text-lg font-bold font-mono text-orange-400">29.8</span>
+              <span id="liveSstVal" class="text-lg font-bold font-mono text-orange-400">N/A</span>
               <span class="text-xs text-orange-400">°C</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
@@ -347,12 +364,12 @@
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Eye Wall Diameter</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="liveEyeVal" class="text-lg font-bold font-mono text-cyan-400">34</span>
+              <span id="liveEyeVal" class="text-lg font-bold font-mono text-cyan-400">N/A</span>
               <span class="text-xs text-cyan-400">km</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5 flex justify-between">
               <span>Curvature Symmetry:</span>
-              <span id="liveSymmetryVal" class="text-emerald-400 font-mono font-semibold">86%</span>
+              <span id="liveSymmetryVal" class="text-emerald-400 font-mono font-semibold">N/A</span>
             </div>
           </div>
         </div>
@@ -361,21 +378,21 @@
         <div class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-2.5 text-[11px] grid grid-cols-3 gap-2 text-center">
           <div>
             <span class="text-slate-400 block text-[9px] uppercase">Rel. Humidity (RH)</span>
-            <span id="liveRhVal" class="font-mono text-slate-200 font-semibold">85%</span>
+            <span id="liveRhVal" class="font-mono text-slate-200 font-semibold">N/A</span>
           </div>
           <div>
             <span class="text-slate-400 block text-[9px] uppercase">Wind Shear (VWS)</span>
-            <span id="liveShearVal" class="font-mono text-emerald-400 font-semibold">8.2 kt</span>
+            <span id="liveShearVal" class="font-mono text-emerald-400 font-semibold">N/A</span>
           </div>
           <div>
             <span class="text-slate-400 block text-[9px] uppercase">Forward Motion</span>
-            <span id="liveSpeedVal" class="font-mono text-cyan-400 font-semibold">14 km/h</span>
+            <span id="liveSpeedVal" class="font-mono text-cyan-400 font-semibold">N/A</span>
           </div>
         </div>
 
         <div class="mt-2 text-[10px] text-slate-500 flex justify-between items-center">
-          <span>Satellite Channel: <span id="liveFrameId" class="font-mono text-slate-400">INSAT-3D TIR-1</span></span>
-          <span class="text-emerald-400 font-mono">● CALIBRATED</span>
+          <span>Satellite Channel: <span id="liveFrameId" class="font-mono text-slate-400">STANDBY</span></span>
+          <span class="text-slate-500 font-mono">● OFFLINE</span>
         </div>
       </div>
 
@@ -394,21 +411,18 @@
         </div>
 
         <!-- Predicted Classification Category Badge -->
-        <div class="bg-gradient-to-r from-red-950/40 via-slate-900 to-slate-900 border border-red-500/30 rounded-xl p-3 mb-3">
+        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-xl p-3 mb-3">
           <div class="flex items-center justify-between">
             <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">PREDICTED INTENSITY TIER</span>
-            <span id="predConfidence" class="text-[10px] font-mono text-emerald-400 font-semibold">98.5% Confidence</span>
+            <span id="predConfidence" class="text-[10px] font-mono text-slate-400 font-semibold">Awaiting Simulation</span>
           </div>
           <div class="flex items-center justify-between mt-1">
-            <span id="predCategory" class="text-base font-extrabold text-red-400 uppercase tracking-wide">Cyclonic Storm</span>
-            <span id="predCategoryCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-red-600 text-white">CAT 2</span>
+            <span id="predCategory" class="text-base font-extrabold text-slate-400 uppercase tracking-wide">STANDBY</span>
+            <span id="predCategoryCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">N/A</span>
           </div>
           <!-- Probability distribution -->
           <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden flex">
-            <div class="bg-blue-500 h-full" style="width: 1.2%"></div>
-            <div class="bg-emerald-500 h-full" style="width: 98.5%"></div>
-            <div class="bg-yellow-500 h-full" style="width: 0.2%"></div>
-            <div class="bg-orange-500 h-full" style="width: 0.1%"></div>
+            <div id="probBar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
           </div>
         </div>
 
@@ -419,13 +433,13 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Forecasted Wind</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predWindVal" class="text-lg font-bold font-mono text-amber-400">52</span>
+              <span id="predWindVal" class="text-lg font-bold font-mono text-amber-400">N/A</span>
               <span class="text-xs text-amber-400 font-mono">kt</span>
-              <span id="predWindDelta" class="text-[10px] font-mono text-red-400 ml-1">(+7 kt in 6h)</span>
+              <span id="predWindDelta" class="text-[10px] font-mono text-slate-500 ml-1">(N/A)</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>+12h Intensity:</span>
-              <span id="predWind12h" class="text-amber-300 font-mono font-semibold">60 kt</span>
+              <span id="predWind12h" class="text-amber-300 font-mono font-semibold">N/A</span>
             </div>
           </div>
 
@@ -433,13 +447,13 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Predicted Pressure</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predPressureVal" class="text-lg font-bold font-mono text-emerald-400">988</span>
+              <span id="predPressureVal" class="text-lg font-bold font-mono text-emerald-400">N/A</span>
               <span class="text-xs text-emerald-400 font-mono">hPa</span>
-              <span id="predPresDelta" class="text-[10px] font-mono text-red-400 ml-1">(−6 hPa)</span>
+              <span id="predPresDelta" class="text-[10px] font-mono text-slate-500 ml-1">(N/A)</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>Intensity Trend:</span>
-              <span id="predTrendLabel" class="text-red-400 font-mono font-semibold">INTENSIFYING</span>
+              <span id="predTrendLabel" class="text-slate-400 font-mono font-semibold">STANDBY</span>
             </div>
           </div>
 
@@ -447,7 +461,7 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Danger Radius (R30)</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predR30Val" class="text-base font-bold font-mono text-yellow-400">180</span>
+              <span id="predR30Val" class="text-base font-bold font-mono text-yellow-400">N/A</span>
               <span class="text-xs text-yellow-400 font-mono">km</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
@@ -459,7 +473,7 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Storm Radius (R50)</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predR50Val" class="text-base font-bold font-mono text-red-400">65</span>
+              <span id="predR50Val" class="text-base font-bold font-mono text-red-400">N/A</span>
               <span class="text-xs text-red-400 font-mono">km</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
@@ -469,18 +483,18 @@
         </div>
 
         <!-- Coastline Landfall Warning Alert -->
-        <div class="bg-slate-900/90 border border-red-500/30 rounded-xl p-2.5 mb-3 flex items-center justify-between">
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 mb-3 flex items-center justify-between">
           <div>
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Coastline Landfall Forecast</span>
             <div class="flex items-center gap-2 mt-0.5">
-              <span id="predLandfallProb" class="text-base font-bold font-mono text-red-400">92.4%</span>
+              <span id="predLandfallProb" class="text-base font-bold font-mono text-red-400">N/A</span>
               <span class="text-xs text-slate-300">Probability</span>
             </div>
-            <span id="predLandfallTarget" class="text-[10px] text-red-300 block font-semibold">Tamil Nadu / Andhra Coast</span>
+            <span id="predLandfallTarget" class="text-[10px] text-slate-400 block font-semibold">Awaiting Simulation Start</span>
           </div>
           <div class="text-right">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Shore Arrival ETA</span>
-            <span id="predLandfallEta" class="text-lg font-bold font-mono text-amber-400">22.5 hrs</span>
+            <span id="predLandfallEta" class="text-lg font-bold font-mono text-amber-400">N/A</span>
             <span class="text-[10px] text-slate-400 block">Projected Landfall</span>
           </div>
         </div>
@@ -506,7 +520,7 @@
                 </tr>
               </thead>
               <tbody id="predictedWaypointsBody" class="divide-y divide-slate-800/50 text-slate-300">
-                <!-- Dynamically populated via JS -->
+                <tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono italic">Awaiting simulation start... Click 'Start Simulation' above</td></tr>
               </tbody>
             </table>
           </div>
@@ -816,6 +830,7 @@
     // =========================================================================
     // 3. Cyclone Layer & Visual Overlays (Canvas + SVG + Markers)
     // =========================================================================
+    let isSimulationStarted = false; // Controls whether simulation is running or in N/A standby
     let activeScenarioKey = "ditwah";
     let activeScenario = SCENARIOS[activeScenarioKey];
     let showGradCAM = true;
@@ -839,7 +854,7 @@
 
     function renderIMDQuadrants() {
       quadrantsLayer.clearLayers();
-      if (!document.getElementById("chkQuadrants").checked) return;
+      if (!isSimulationStarted || !document.getElementById("chkQuadrants").checked) return;
 
       IMD_QUADRANTS_DATA.forEach(q => {
         const rect = L.rectangle(q.bounds, {
@@ -914,6 +929,9 @@
         if (!this._ctx || !this._map) return;
         const ctx = this._ctx;
         ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+        // DO NOT DRAW CYCLONE VORTEX IF SIMULATION HAS NOT STARTED
+        if (!isSimulationStarted) return;
 
         // Get current eye position based on time scrubber
         const currentCoord = getPositionAtTime(currentTimeStep);
@@ -1047,6 +1065,9 @@
       dangerRadiiLayer.clearLayers();
       targetMarkersLayer.clearLayers();
 
+      // DO NOT DRAW TRAJECTORY IF SIMULATION HAS NOT STARTED
+      if (!isSimulationStarted) return;
+
       const pred = activeScenario.pred;
       const obs = activeScenario.obs;
 
@@ -1168,7 +1189,7 @@
 
       // ----------------------------------------------------
       // D. EYE TARGET CALLOUT (Matching Reference Images 1 & 3)
-      // Red target circle with arrow pointing to Ditwah
+      // Red target circle with arrow pointing to storm name
       // ----------------------------------------------------
       const currentPos = getPositionAtTime(currentTimeStep);
       
@@ -1264,9 +1285,146 @@
     }
 
     // =========================================================================
-    // 6. Sidebar Data Population (Strictly Top: Live | Bottom: Predicted)
+    // 6. Sidebar Data Population: Standby Mode (N/A) vs Active Simulation Values
     // =========================================================================
+    function setStandbyState() {
+      isSimulationStarted = false;
+
+      // Update Action Button
+      const btn = document.getElementById("btnSimulationAction");
+      btn.className = "px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/30 border border-emerald-400/40 cursor-pointer";
+      document.getElementById("simBtnIcon").innerText = "🚀";
+      document.getElementById("simBtnText").innerText = "Start Simulation";
+
+      // Show Standby Banner
+      const banner = document.getElementById("standbyBanner");
+      if (banner) banner.classList.remove("hidden");
+
+      // Status badges
+      document.getElementById("telemetryStatusChip").innerText = "STANDBY (OFFLINE)";
+      document.getElementById("telemetryStatusChip").className = "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
+      document.getElementById("insatBadge").innerText = "STANDBY";
+      document.getElementById("insatBadge").className = "text-slate-500 font-semibold";
+      document.getElementById("buoyBadge").innerText = "STANDBY";
+      document.getElementById("buoyBadge").className = "text-slate-500 font-semibold";
+      document.getElementById("radarBadge").innerText = "STANDBY";
+      document.getElementById("radarBadge").className = "text-slate-500 font-semibold";
+
+      // Target Card
+      document.getElementById("targetStormName").innerText = "STANDBY (No Active Storm)";
+      document.getElementById("targetStormBadge").innerText = "N/A";
+      document.getElementById("targetCoords").innerText = "N/A";
+      document.getElementById("targetBasin").innerText = "Awaiting Simulation Start";
+      document.getElementById("targetCalloutCard").className = "bg-slate-950/90 border-2 border-slate-700 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur";
+      document.getElementById("targetSecondCard").classList.add("hidden");
+
+      // Mode Badge
+      document.getElementById("gradcamStatusBadge").className = "bg-slate-900/85 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400 backdrop-blur shadow-lg flex items-center gap-2";
+      document.getElementById("gradcamStatusText").innerText = "SIMULATION STANDBY: CLICK 'START SIMULATION'";
+
+      // PART 1: LIVE SENSORY DATA -> SHOW N/A
+      document.getElementById("liveWindVal").innerText = "N/A";
+      document.getElementById("liveWindKmh").innerText = "(N/A)";
+      document.getElementById("liveGustVal").innerText = "N/A";
+      document.getElementById("livePressureVal").innerText = "N/A";
+      document.getElementById("livePressureDrop").innerText = "N/A";
+      document.getElementById("liveSstVal").innerText = "N/A";
+      document.getElementById("liveEyeVal").innerText = "N/A";
+      document.getElementById("liveSymmetryVal").innerText = "N/A";
+      document.getElementById("liveRhVal").innerText = "N/A";
+      document.getElementById("liveShearVal").innerText = "N/A";
+      document.getElementById("liveSpeedVal").innerText = "N/A";
+      document.getElementById("liveFrameId").innerText = "STANDBY";
+
+      // PART 2: PREDICTED DATA -> SHOW N/A
+      document.getElementById("predConfidence").innerText = "Awaiting Simulation";
+      document.getElementById("predCategory").innerText = "STANDBY";
+      document.getElementById("predCategoryCode").innerText = "N/A";
+      document.getElementById("probBar").style.width = "0%";
+      document.getElementById("predWindVal").innerText = "N/A";
+      document.getElementById("predWindDelta").innerText = "(N/A)";
+      document.getElementById("predWind12h").innerText = "N/A";
+      document.getElementById("predPressureVal").innerText = "N/A";
+      document.getElementById("predPresDelta").innerText = "(N/A)";
+      document.getElementById("predTrendLabel").innerText = "STANDBY";
+      document.getElementById("predR30Val").innerText = "N/A";
+      document.getElementById("predR50Val").innerText = "N/A";
+      document.getElementById("predLandfallProb").innerText = "N/A";
+      document.getElementById("predLandfallTarget").innerText = "Awaiting Simulation Start";
+      document.getElementById("predLandfallEta").innerText = "N/A";
+
+      // Predicted Waypoints Table
+      document.getElementById("predictedWaypointsBody").innerHTML = `
+        <tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono italic">
+          Awaiting simulation start... Click 'Start Simulation' above
+        </td></tr>
+      `;
+
+      // Clear layers from map
+      trajectoryLayer.clearLayers();
+      dangerRadiiLayer.clearLayers();
+      targetMarkersLayer.clearLayers();
+      quadrantsLayer.clearLayers();
+
+      // Reset timeline
+      currentTimeStep = 0;
+      document.getElementById("timeSlider").value = 0;
+      document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
+      if (isPlaying) {
+        document.getElementById("btnPlay").click();
+      }
+    }
+
+    function startSimulation() {
+      isSimulationStarted = true;
+
+      // Update Action Button to Stop / Reset
+      const btn = document.getElementById("btnSimulationAction");
+      btn.className = "px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition flex items-center gap-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-600/30 border border-rose-400/40 cursor-pointer";
+      document.getElementById("simBtnIcon").innerText = "⏹";
+      document.getElementById("simBtnText").innerText = "Stop / Reset";
+
+      // Hide Standby Banner
+      const banner = document.getElementById("standbyBanner");
+      if (banner) banner.classList.add("hidden");
+
+      // Status badges
+      document.getElementById("telemetryStatusChip").innerText = "TELEMETRY STREAM";
+      document.getElementById("telemetryStatusChip").className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
+      document.getElementById("insatBadge").innerText = "10.8µm LOCKED";
+      document.getElementById("insatBadge").className = "text-emerald-400 font-semibold";
+      document.getElementById("buoyBadge").innerText = "AWS SYNCED";
+      document.getElementById("buoyBadge").className = "text-emerald-400 font-semibold";
+      document.getElementById("radarBadge").innerText = "250km RANGE";
+      document.getElementById("radarBadge").className = "text-cyan-400 font-semibold";
+
+      document.getElementById("targetCalloutCard").className = "bg-slate-950/90 border-2 border-red-600 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur";
+
+      // Mode Badge
+      if (showGradCAM) {
+        document.getElementById("gradcamStatusBadge").className = "bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2";
+        document.getElementById("gradcamStatusText").innerText = "GRAD-CAM CONVECTIVE ATTENTION ACTIVE";
+      } else {
+        document.getElementById("gradcamStatusBadge").className = "bg-slate-900/85 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 backdrop-blur shadow-lg flex items-center gap-2";
+        document.getElementById("gradcamStatusText").innerText = "NATURAL SATELLITE IR IMAGERY ACTIVE";
+      }
+
+      // Populate Live Sensory & Predicted Data
+      updateSidebarData();
+      renderTrajectoryAndMarkers();
+      renderIMDQuadrants();
+
+      // Smoothly pan & fly map to active cyclone
+      const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
+      map.flyTo(center, activeScenario.zoom || 6, {
+        duration: 1.2,
+        easeLinearity: 0.25
+      });
+    }
+
     function updateSidebarData() {
+      if (!isSimulationStarted) return;
+
       const obs = activeScenario.obs;
       const pred = activeScenario.pred;
 
@@ -1302,6 +1460,7 @@
       document.getElementById("predConfidence").innerText = `${activeScenario.confidence} Confidence`;
       document.getElementById("predCategory").innerText = activeScenario.catName;
       document.getElementById("predCategoryCode").innerText = activeScenario.catCode;
+      document.getElementById("probBar").style.width = "98.5%";
 
       document.getElementById("predWindVal").innerText = pred.wind;
       document.getElementById("predWindDelta").innerText = `(${pred.deltaWind})`;
@@ -1449,17 +1608,35 @@
       document.getElementById("timeSlider").value = 0;
       document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
 
-      updateSidebarData();
-      renderTrajectoryAndMarkers();
-      renderIMDQuadrants();
-
-      // Smoothly pan & zoom map to active cyclone
-      const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
-      map.flyTo(center, activeScenario.zoom || 6, {
-        duration: 1.2,
-        easeLinearity: 0.25
-      });
+      if (isSimulationStarted) {
+        updateSidebarData();
+        renderTrajectoryAndMarkers();
+        renderIMDQuadrants();
+        const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
+        map.flyTo(center, activeScenario.zoom || 6, {
+          duration: 1.2,
+          easeLinearity: 0.25
+        });
+      } else {
+        // In standby, simply pan map closer to selected storm without revealing values
+        const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
+        map.flyTo(center, activeScenario.zoom || 5, { duration: 0.8 });
+      }
     }
+
+    // Main Simulation Action Button Click Handler (Start / Stop)
+    document.getElementById("btnSimulationAction").addEventListener("click", () => {
+      if (isSimulationStarted) {
+        setStandbyState();
+      } else {
+        startSimulation();
+      }
+    });
+
+    // Quick Start button inside standby banner
+    document.getElementById("btnQuickStart").addEventListener("click", () => {
+      startSimulation();
+    });
 
     document.getElementById("scenarioSelect").addEventListener("change", (e) => {
       switchScenario(e.target.value);
@@ -1483,14 +1660,18 @@
         gradcamLabel.innerText = "With Grad-CAM: ON";
         gradcamIcon.innerText = "🔥";
         btnToggleGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-rose-950/60 border border-rose-500 text-rose-400 hover:bg-rose-900/50 shadow-sm shadow-rose-500/30";
-        gradcamStatusBadge.className = "bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2";
-        gradcamStatusText.innerText = "GRAD-CAM CONVECTIVE ATTENTION ACTIVE";
+        if (isSimulationStarted) {
+          gradcamStatusBadge.className = "bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2";
+          gradcamStatusText.innerText = "GRAD-CAM CONVECTIVE ATTENTION ACTIVE";
+        }
       } else {
         gradcamLabel.innerText = "Without Grad-CAM: OFF";
         gradcamIcon.innerText = "🛰️";
         btnToggleGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white";
-        gradcamStatusBadge.className = "bg-slate-900/85 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 backdrop-blur shadow-lg flex items-center gap-2";
-        gradcamStatusText.innerText = "NATURAL SATELLITE IR IMAGERY ACTIVE";
+        if (isSimulationStarted) {
+          gradcamStatusBadge.className = "bg-slate-900/85 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 backdrop-blur shadow-lg flex items-center gap-2";
+          gradcamStatusText.innerText = "NATURAL SATELLITE IR IMAGERY ACTIVE";
+        }
       }
     });
 
@@ -1507,12 +1688,17 @@
       } else {
         timeStepLabel.innerText = `FORECAST (+${currentTimeStep}h)`;
       }
-      renderTrajectoryAndMarkers();
+      if (isSimulationStarted) {
+        renderTrajectoryAndMarkers();
+      }
     });
 
     // Playback loop
     const btnPlay = document.getElementById("btnPlay");
     btnPlay.addEventListener("click", () => {
+      if (!isSimulationStarted) {
+        startSimulation();
+      }
       isPlaying = !isPlaying;
       if (isPlaying) {
         btnPlay.innerText = "⏸";
@@ -1536,8 +1722,8 @@
     document.getElementById("chkRadii").addEventListener("change", renderTrajectoryAndMarkers);
     document.getElementById("chkCone").addEventListener("change", renderTrajectoryAndMarkers);
 
-    // Initial boot
-    switchScenario("ditwah");
+    // Initial state: STANDBY (All values N/A, button is Start Simulation)
+    setStandbyState();
   </script>
 </body>
 </html>
