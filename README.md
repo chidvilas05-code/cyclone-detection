@@ -61,11 +61,11 @@ python src/visualization/launch_simulation.py
 - **Predicted Movement Path**: Highlighted as a **vivid red dotted line** with glowing forecast waypoints ($+3\text{h}, +6\text{h}, +9\text{h}, +12\text{h}, +18\text{h}, +24\text{h}$) and an expanding cone of uncertainty.
 - **Random Occurrence Button**: Click `🎲 Simulate New Random Cyclone` to test newly generated storms across different ocean basins in real time.
 
-#### Option B: Unified Streamlit Web Dashboard
+#### Option B: Interactive Streamlit Web Dashboard
 ```powershell
 streamlit run app/app.py
 ```
-Select **"🌐 3D Cyclone Movement & Sensory Simulation"** in the sidebar.
+*Immediately launches the dedicated 3D Interactive Simulation & Multi-Task Forecaster dashboard.*
 
 ---
 
