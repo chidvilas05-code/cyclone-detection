@@ -432,23 +432,23 @@
         <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
-            <h2 class="text-xs font-bold uppercase tracking-wider text-red-400">Coastline Landfall & Impact Sensory</h2>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-red-400">Coastline Landfall Impact Sensory</h2>
           </div>
-          <span id="predLandfallProb" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">N/A</span>
+          <span id="predLandfallEtaBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">ETA: N/A</span>
         </div>
 
         <!-- Landfall Shore & Coordinates Primary Banner -->
         <div class="bg-gradient-to-br from-red-950/50 via-slate-900 to-slate-950 border border-red-500/40 rounded-xl p-3.5 mb-3 shadow-xl">
           <div class="flex items-start justify-between gap-3">
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">Impact Coastal Shore Target</span>
               <span id="predLandfallTarget" class="text-sm font-extrabold text-slate-100 block mt-1 tracking-tight">Awaiting Simulation Start</span>
-              <div class="mt-2 flex items-center gap-3 text-[11px] text-slate-300">
-                <span>Shore Arrival ETA: <b id="predLandfallEta" class="text-amber-400 font-mono font-bold">N/A</b></span>
-                <span>Impact Tier: <b id="landfallCategory" class="text-red-400 font-mono font-bold">N/A</b></span>
+              <div class="mt-2 text-[11px] text-slate-300 flex items-center gap-1.5">
+                <span>Cyclone Arrival Time:</span>
+                <b id="predLandfallEta" class="text-amber-400 font-mono font-bold text-xs">N/A</b>
               </div>
             </div>
-            <div class="text-right bg-slate-950/80 border border-red-500/30 rounded-lg p-2.5 min-w-[130px]">
+            <div class="text-right bg-slate-950/80 border border-red-500/30 rounded-lg p-2.5 min-w-[130px] shrink-0">
               <span class="text-[9px] text-red-400 uppercase tracking-wider block font-bold">Landfall Coordinates</span>
               <span id="landfallCoords" class="text-sm font-mono font-black text-red-400 block mt-1">N/A</span>
               <span class="text-[9px] text-slate-500 font-mono block mt-0.5">LATITUDE / LONGITUDE</span>
@@ -456,44 +456,41 @@
           </div>
         </div>
 
-        <!-- Sensory Data When Cyclone Hits Landfall (Detailed Telemetry Grid) -->
-        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 mb-3 shadow-lg">
-          <div class="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-800/80">
-            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-300 flex items-center gap-1.5">
-              <span>🌊</span> Sensory Environment When Cyclone Hits Shore
-            </span>
-            <span class="text-[9px] font-mono text-cyan-400 font-semibold">IMPACT STATE</span>
+        <!-- 5 Landfall Telemetry Boxes (Equal Visual Importance) -->
+        <div class="grid grid-cols-6 gap-2 text-center font-mono mb-3">
+          <!-- Box 1: Landfall Wind -->
+          <div class="col-span-2 bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0 flex flex-col justify-between shadow">
+            <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Landfall Wind</span>
+            <span id="landfallWindVal" class="text-base font-bold text-amber-400 block mt-0.5 whitespace-nowrap">N/A</span>
+            <span id="landfallGustVal" class="text-[10px] text-slate-400 block mt-0.5 truncate font-sans">Gust: N/A</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-2 text-center font-mono">
-            <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0">
-              <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Landfall Wind</span>
-              <span id="landfallWindVal" class="text-base font-bold text-amber-400 block mt-0.5 whitespace-nowrap">N/A</span>
-              <span id="landfallGustVal" class="text-[10px] text-slate-400 block mt-0.5 truncate">Gust: N/A</span>
-            </div>
-
-            <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0">
-              <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Impact Pressure</span>
-              <span id="landfallPressureVal" class="text-base font-bold text-emerald-400 block mt-0.5 whitespace-nowrap">N/A</span>
-              <span class="text-[9px] text-red-400 block mt-0.5 font-sans font-medium truncate">Central Low</span>
-            </div>
-
-            <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0">
-              <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Est. Storm Surge</span>
-              <span id="landfallSurgeVal" class="text-base font-bold text-cyan-400 block mt-0.5 whitespace-nowrap">N/A</span>
-              <span class="text-[9px] text-slate-400 block mt-0.5 font-sans truncate">Inundation</span>
-            </div>
+          <!-- Box 2: Impact Pressure -->
+          <div class="col-span-2 bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0 flex flex-col justify-between shadow">
+            <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Impact Pressure</span>
+            <span id="landfallPressureVal" class="text-base font-bold text-emerald-400 block mt-0.5 whitespace-nowrap">N/A</span>
+            <span class="text-[9px] text-red-400 block mt-0.5 font-sans font-medium truncate">Central Low</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-800/70 font-mono text-xs">
-            <div class="bg-slate-950/60 border border-slate-800/80 rounded p-2 flex items-center justify-between">
-              <span class="text-[10px] text-slate-400">Gale Radius (R30):</span>
-              <b id="landfallR30Val" class="text-yellow-400 font-bold">N/A</b>
-            </div>
-            <div class="bg-slate-950/60 border border-slate-800/80 rounded p-2 flex items-center justify-between">
-              <span class="text-[10px] text-slate-400">Eyewall Core (R50):</span>
-              <b id="landfallR50Val" class="text-red-400 font-bold">N/A</b>
-            </div>
+          <!-- Box 3: Est. Storm Surge -->
+          <div class="col-span-2 bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0 flex flex-col justify-between shadow">
+            <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Est. Storm Surge</span>
+            <span id="landfallSurgeVal" class="text-base font-bold text-cyan-400 block mt-0.5 whitespace-nowrap">N/A</span>
+            <span class="text-[9px] text-slate-400 block mt-0.5 font-sans truncate">Inundation</span>
+          </div>
+
+          <!-- Box 4: Gale Radius (R30) -->
+          <div class="col-span-3 bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0 flex flex-col justify-between shadow">
+            <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Gale Radius (R30)</span>
+            <span id="landfallR30Val" class="text-base font-bold text-yellow-400 block mt-0.5 whitespace-nowrap">N/A</span>
+            <span class="text-[9px] text-yellow-500/80 block mt-0.5 font-sans truncate">34+ kt Gale Zone</span>
+          </div>
+
+          <!-- Box 5: Eyewall Core (R50) -->
+          <div class="col-span-3 bg-slate-950/80 border border-slate-800 rounded-lg p-2 min-w-0 flex flex-col justify-between shadow">
+            <span class="text-slate-400 block text-[9px] uppercase tracking-wider truncate">Eyewall Core (R50)</span>
+            <span id="landfallR50Val" class="text-base font-bold text-red-400 block mt-0.5 whitespace-nowrap">N/A</span>
+            <span class="text-[9px] text-red-400/80 block mt-0.5 font-sans truncate">50+ kt Core Hazard</span>
           </div>
         </div>
 
@@ -2103,11 +2100,12 @@
       document.getElementById("liveFrameId").innerText = "STANDBY";
 
       // PART 2: COASTLINE LANDFALL LOCATION & SENSORY DATA -> SHOW N/A
-      document.getElementById("predLandfallProb").innerText = "N/A";
+      if (document.getElementById("predLandfallEtaBadge")) {
+        document.getElementById("predLandfallEtaBadge").innerText = "ETA: N/A";
+      }
       document.getElementById("predLandfallTarget").innerText = "Awaiting Simulation Start";
       document.getElementById("landfallCoords").innerText = "N/A";
       document.getElementById("predLandfallEta").innerText = "N/A";
-      document.getElementById("landfallCategory").innerText = "N/A";
       document.getElementById("landfallWindVal").innerText = "N/A";
       document.getElementById("landfallGustVal").innerText = "Gust: N/A";
       document.getElementById("landfallPressureVal").innerText = "N/A";
@@ -2267,14 +2265,16 @@
       document.getElementById("liveFrameId").innerText = currentSensory.frame;
 
       // --- PART 2: COASTLINE LANDFALL LOCATION & SENSORY DATA WHEN IT HITS ---
-      document.getElementById("predLandfallProb").innerText = `${landfall.prob || "92.0%"} Prob`;
+      if (document.getElementById("predLandfallEtaBadge")) {
+        document.getElementById("predLandfallEtaBadge").innerText = `ETA: ${landfall.eta || "21.0 hrs"}`;
+      }
       document.getElementById("predLandfallTarget").innerText = landfall.target || "Coastal Zone";
       document.getElementById("landfallCoords").innerText = landfall.coords || "N/A";
-      document.getElementById("predLandfallEta").innerText = landfall.eta || "24.0 hrs";
-      document.getElementById("landfallCategory").innerText = activeScenario.catName;
+      document.getElementById("predLandfallEta").innerText = `${landfall.eta || "21.0 hrs"} (+21.0h Landfall)`;
 
       document.getElementById("landfallWindVal").innerText = `${landfall.wind || pred.wind} kt`;
       document.getElementById("landfallGustVal").innerText = `Gust: ${landfall.gust || Math.round((landfall.wind || pred.wind) * 1.3)} kt`;
+      document.getElementById("landfallPressureVal").innerText = `${landfall.pressure || pred.pressure} hPa`;
       const rawSurge = landfall.surge || "2.5 - 3.5 m";
       document.getElementById("landfallSurgeVal").innerText = rawSurge.split("(")[0].trim();
       document.getElementById("landfallR30Val").innerText = `${landfall.r30 || pred.r30} km`;
