@@ -341,3 +341,7 @@ class MultiTaskSpatiotemporalCycloneModel(nn.Module):
         model_dict.update(transferred)
         self.load_state_dict(model_dict)
         print(f"[Model V2] Successfully inherited {len(transferred)} layer parameters from Version 1 ({checkpoint_path})!")
+
+
+# Canonical alias for Version 2 Spatiotemporal Forecaster
+SpatiotemporalCycloneForecasterV2 = MultiTaskSpatiotemporalCycloneModel

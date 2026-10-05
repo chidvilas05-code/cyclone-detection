@@ -1,15 +1,14 @@
-# Tropical Cyclone AI/ML Pipeline Configuration
-project_name: "cyclone_analysis_system"
+# Tropical Cyclone Spatiotemporal Forecaster & 3D Simulation Configuration
+project_name: "cyclone_spatiotemporal_forecaster"
 seed: 42
 
-# Data Paths
+# Data & Model Paths
 paths:
-  images_dir: "data/images"
-  sensory_dir: "data/sensory"
-  sensory_csv: "data/sensory/cyclone_sensory.csv"
-  vision_model_dir: "models/vision_model"
-  sensory_model_dir: "models/sensory_model"
-  output_eval_dir: "models/evaluation_results"
+  simulation_html: "src/visualization/cyclone_3d_simulation.html"
+  sequence_model_v2_dir: "models/sequence_model_v2"
+  checkpoint_v2: "models/sequence_model_v2/best_sequence_model_v2.pt"
+  output_eval_dir: "models/sequence_model_v2/evaluation_plots_v2"
+  simulation_results_dir: "models/sequence_model_v2/simulation_results"
 
 # Cyclone Classification Categories (IMD / WMO standard based on sustained wind speed in knots)
 categories:
@@ -44,84 +43,29 @@ categories:
     max_knots: 250
     description: "Well-defined central dense overcast & clear eye (>= 90 kt / >= 167 km/h)"
 
-# Model 1: Satellite Vision Transfer Learning
-vision_model:
-  backbone: "dual_stream_eye"   # Options: dual_stream_eye, eye_core, hybrid, convnext_tiny
-  pretrained: true
-  img_size: 224
-  in_channels: 3               # Auto-converts 1-channel Grayscale/IR to 3-channel
-  num_classes: 5
-  dual_head: true              # Simultaneous Classification + Wind Speed Regression
-  eye_crop_ratio: 0.50         # Central 50% bounding region focused on eyewall and CDO
-  
-  # Training Hyperparameters (Tuned for RTX 5060 8GB VRAM)
-  batch_size: 32
-  num_workers: 0
-  epochs: 25
-  learning_rate: 0.00028
-  min_lr: 0.00002              # Smooth decay floor
-  backbone_lr_ratio: 0.18      # Optimal fine-tuning rate for Swin/ConvNeXt (~5e-5)
-  scheduler_type: "cosine"     # Smooth CosineAnnealingLR without disruptive warm restarts
-  weight_decay: 0.0003         # Light L2 regularization to maximize model capacity
-  loss_type: "cross_entropy"   # Class-Balanced Cross-Entropy (gamma=0.0)
-  focal_gamma: 0.0             # 0.0 guarantees full un-dampened gradients for 92%+ accuracy
-  label_smoothing: 0.01        # Tightened label smoothing directly lowers validation loss floor
-  amp_fp16: true               # PyTorch Automatic Mixed Precision for RTX 5060 speedup
-  early_stopping_patience: 10
-  val_split: 0.15
-  test_split: 0.10
-
-
-# Model 2: Tabular Sensory / Atmospheric Predictor
-sensory_model:
-  model_type: "lightgbm"       # Options: lightgbm, xgboost
-  target_classification: "category"
-  target_regression: "wind_speed"
-  
-  # Candidate sensory features (with automated alias matching for IBTrACS / Kaggle CSVs)
-  features:
-    - "central_pressure"       # or WMO_PRES, min_pressure (hPa/mb)
-    - "sst"                    # Sea Surface Temperature (°C or K)
-    - "vertical_wind_shear"    # VWS (knots or m/s)
-    - "relative_humidity"      # RH at 700/500 hPa (%)
-    - "translation_speed"      # Storm forward movement speed (knots or km/h)
-    - "latitude"
-    - "longitude"
-    - "vorticity"              # Optional if present in ERA5/SHIPS
-  
-  # LightGBM parameters
-  lgbm_params:
-    objective: "multiclass"
-    num_class: 5
-    metric: "multi_logloss"
-    boosting_type: "gbdt"
-    n_estimators: 300
-    learning_rate: 0.05
-    num_leaves: 31
-    max_depth: 6
-    random_state: 42
-    n_jobs: -1
-
-# Multimodal Fusion
-fusion:
-  vision_weight: 0.60          # Weight given to satellite image pattern
-  sensory_weight: 0.40         # Weight given to physical atmospheric sensor readings
-
-# Model 3: Equal-Interval Spatiotemporal Cyclone Sequence Model
-sequence_model:
-  sequence_length: 4           # Number of consecutive equal-interval frames [t-3, t-2, t-1, t]
-  interval_minutes: 60         # 60 minutes (1 hour) matching Digital Typhoon WP
-  spatial_backbone: "convnext_tiny"  # Options: convnext_tiny, resnet50, swin_tiny_patch4_window7_224
-  temporal_engine: "transformer"     # Options: transformer, gru
+# Spatiotemporal Multi-Task Architecture Configuration
+sequence_model_v2:
+  sequence_length: 4           # 4 consecutive hourly frames [t-3, t-2, t-1, t]
+  synoptic_size: 224           # Full cloud canopy synoptic view (1000 km)
+  core_crop_ratio: 0.25        # High-resolution central eyewall core crop
+  spatial_backbone: "convnext_tiny"
+  temporal_engine: "gru"
   hidden_dim: 256
-  num_transformer_layers: 2
-  num_heads: 4
+  num_classes: 5
   dropout: 0.20
-  img_size: 224
-  batch_size: 16
-  epochs: 20
-  learning_rate: 0.00015
-  weight_decay: 0.0001
-  amp_fp16: true
-  save_dir: "models/sequence_model"
+  asymmetric_loss_weight: 2.5  # Safety penalty multiplier for underestimating severe storms
 
+# Physical Normalization Constants
+normalization:
+  wind_mean: 50.0
+  wind_std: 25.0
+  pres_mean: 985.0
+  pres_std: 20.0
+  danger_r30_max: 500.0        # Max gale radius in km
+  danger_r50_max: 250.0        # Max storm radius in km
+
+# 3D Simulation & Server Configuration
+simulation:
+  port: 8055
+  default_scenario: "ditwah"
+  time_steps: [-18, -12, -6, 0, 3, 6, 9, 12, 18, 24]
