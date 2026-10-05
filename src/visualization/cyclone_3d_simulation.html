@@ -3,130 +3,176 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Cyclone Simulation & Multi-Task Forecaster</title>
+  <title>3D Geospatial Cyclone Simulation & Multi-Task Forecaster</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
-    @keyframes pulse-red {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.15); }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.85); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
     }
-    @keyframes pulse-green {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    @keyframes spin-slow {
+    @keyframes radar-sweep {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-    .pulse-dot {
-      animation: pulse-red 1.6s infinite ease-in-out;
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
-    .live-beacon {
-      animation: pulse-green 1.4s infinite ease-in-out;
+    @keyframes glow-red {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9)); }
+      50% { filter: drop-shadow(0 0 14px rgba(239, 68, 68, 1)); }
     }
-    /* Custom scrollbar for data panels */
+    .pulse-beacon {
+      animation: pulse-ring 2.2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+    }
+    .radar-beam {
+      animation: radar-sweep 5s linear infinite;
+      transform-origin: center center;
+    }
+    .live-dot {
+      animation: live-pulse 1.4s infinite ease-in-out;
+    }
+    .red-dotted-glow {
+      animation: glow-red 2s infinite ease-in-out;
+    }
+    /* Custom clean scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(10, 15, 30, 0.8);
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(59, 130, 246, 0.4);
+      background: rgba(56, 189, 248, 0.35);
       border-radius: 3px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(59, 130, 246, 0.7);
+      background: rgba(56, 189, 248, 0.65);
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans antialiased overflow-hidden select-none m-0 p-0 h-screen w-screen flex flex-col">
+<body class="bg-black text-slate-100 font-sans antialiased overflow-hidden select-none m-0 p-0 h-screen w-screen flex flex-col">
 
-  <!-- Top Operational Header Bar -->
-  <header class="h-14 bg-slate-900/90 border-b border-slate-800 px-4 flex items-center justify-between z-20 backdrop-blur shrink-0">
+  <!-- Operational Header Bar -->
+  <header class="h-14 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0 backdrop-blur">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-rose-600 via-amber-500 to-blue-600 flex items-center justify-center shadow-lg shadow-rose-500/20">
         <span class="text-xl">🌀</span>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-sm font-bold tracking-wide text-white uppercase">Cyclone 3D Physical Simulation & Multi-Task Forecaster</h1>
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono border border-blue-500/30">V2 AI Model Active</span>
+          <h1 class="text-sm font-bold tracking-wide text-white uppercase">Cyclone 3D Geospatial Simulation & Multi-Task Forecaster</h1>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span> REAL SATELLITE CARTOGRAPHY
+          </span>
         </div>
-        <p class="text-[11px] text-slate-400">Interactive 3D Geospatial Forecast Engine & Real-Time Sensory Observation</p>
+        <p class="text-[11px] text-slate-400">INSAT-3D Style Real-World Map Grids • State/District Borders • Explainable Grad-CAM Convective Attention</p>
       </div>
     </div>
 
-    <!-- Quick Scenario / Basin Selector -->
-    <div class="flex items-center gap-2">
-      <span class="text-xs text-slate-400 hidden sm:inline">Scenario / Basin:</span>
-      <select id="scenarioSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500 transition cursor-pointer">
-        <option value="bob">Bay of Bengal (Super Cyclone 'Amphan' Simulation)</option>
-        <option value="arb">Arabian Sea (Extremely Severe 'Biparjoy' Simulation)</option>
-        <option value="wnp">Western North Pacific (Cat 5 Super Typhoon 'Haiyan')</option>
-        <option value="scs">South China Sea (Severe Typhoon 'Yagi' Simulation)</option>
-        <option value="random">🎲 Generate New Random Occurrence</option>
-      </select>
+    <!-- Top Controls: Mode Toggles & Scenarios -->
+    <div class="flex items-center gap-2.5">
+      
+      <!-- Visual Imagery Theme -->
+      <div class="flex items-center bg-slate-800/90 rounded-lg p-0.5 border border-slate-700 text-xs">
+        <button id="btnThemeIR" class="px-2.5 py-1 rounded font-semibold bg-slate-700 text-white transition" title="Monochromatic Infrared (Image 1 & 3 reference style)">
+          🛰️ Mono IR (10.8µm)
+        </button>
+        <button id="btnThemeRGB" class="px-2.5 py-1 rounded font-medium text-slate-300 hover:text-white transition" title="Enhanced False-Color Thermal (Image 2 reference style)">
+          🌈 Enhanced RGB
+        </button>
+      </div>
 
-      <button id="btnRandomize" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition active:scale-95 font-medium">
-        <span>🎲</span>
-        <span class="hidden md:inline">Simulate New Random Cyclone</span>
+      <!-- Grad-CAM Toggle Button -->
+      <button id="btnToggleGradCAM" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-rose-500/50 text-rose-400 hover:bg-rose-950/40">
+        <span id="gradcamIcon">🔥</span>
+        <span id="gradcamLabel">With Grad-CAM: ON</span>
       </button>
 
-      <button id="btnResetView" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition" title="Reset Camera">
+      <!-- Scenario Selector -->
+      <select id="scenarioSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500 transition cursor-pointer">
+        <option value="ditwah">📍 Cyclonic Storm 'Ditwah' (6.9°N, 87.9°E) [Reference Image 1]</option>
+        <option value="coastal_wcb">📍 Deep Convective Core (West Central Bay) [Reference Image 2]</option>
+        <option value="dual_vortex">📍 Dual-Cyclone: Ditwah + Remnant Senyar [Reference Image 3]</option>
+        <option value="biparjoy">📍 Extremely Severe 'Biparjoy' (Arabian Sea)</option>
+        <option value="amphan">📍 Super Cyclone 'Amphan' (North Bay of Bengal)</option>
+        <option value="random">🎲 Simulate New Random Occurrence</option>
+      </select>
+
+      <button id="btnResetView" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition" title="Reset View">
         🧭 Reset 3D
       </button>
     </div>
   </header>
 
-  <!-- Main Work Area: 3D Map (Left) + Split Sensory/Predicted (Right) -->
+  <!-- Main Work Area: 3D Map (Left) + Split Panel (Right) -->
   <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- LEFT: 3D Geospatial Map Canvas Container -->
-    <div class="flex-1 relative bg-radial from-slate-900 to-black overflow-hidden flex items-center justify-center" id="mapContainer">
+    <!-- LEFT: 3D Real-World Geospatial Map Canvas Container -->
+    <div class="flex-1 relative bg-black overflow-hidden flex items-center justify-center" id="mapContainer">
       
-      <!-- Native 3D Globe Canvas -->
+      <!-- Native 3D / Geospatial Canvas -->
       <canvas id="globeCanvas" class="block w-full h-full cursor-grab active:cursor-grabbing"></canvas>
 
-      <!-- Overlay HUD: Map Controls & Legend -->
+      <!-- Top Overlay Legend & Target Callout matching Reference Images -->
       <div class="absolute top-3 left-3 flex flex-col gap-2 z-10 pointer-events-none">
         
-        <!-- Storm Identity Card -->
-        <div class="bg-slate-900/85 border border-slate-700/70 backdrop-blur rounded-xl p-3 shadow-xl pointer-events-auto min-w-[240px]">
-          <div class="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-800">
-            <span id="hudStormName" class="font-bold text-sm text-white tracking-wide">CYCLONE AMPHAN</span>
-            <span id="hudCatBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-red-600/30 text-red-300 border border-red-500/40">Category 5</span>
+        <!-- Live Storm Reference Target Banner (Styled exactly like Reference Images 1 & 3) -->
+        <div id="targetCalloutCard" class="bg-slate-950/90 border-2 border-red-600 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[220px]">
+          <div class="flex items-center justify-between gap-3">
+            <span id="targetStormName" class="font-mono font-bold text-xs text-red-500 uppercase tracking-wider">Cyclonic Storm Ditwah</span>
+            <span id="targetStormBadge" class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-red-600/30 text-red-300 border border-red-500">CS</span>
           </div>
-          <div class="grid grid-cols-2 gap-2 text-[11px]">
-            <div>
-              <span class="text-slate-400 block text-[10px]">CURRENT BASIN</span>
-              <span id="hudBasin" class="font-medium text-slate-200">Bay of Bengal</span>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px]">CENTER COORDINATES</span>
-              <span id="hudCoords" class="font-mono text-cyan-400 font-semibold">18.4°N, 87.1°E</span>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px]">CENTRAL PRESSURE</span>
-              <span id="hudPressure" class="font-mono text-emerald-400 font-semibold">922 hPa</span>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px]">SUSTAINED WINDS</span>
-              <span id="hudWind" class="font-mono text-amber-400 font-semibold">120 kt (222 km/h)</span>
-            </div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span id="targetCoords" class="font-mono text-sm font-extrabold text-white">6.9°N / 87.9°E</span>
+            <span id="targetBasin" class="text-[10px] text-slate-400">South Bay of Bengal</span>
           </div>
         </div>
 
-        <!-- 3D Legend & Trajectory Guide -->
-        <div class="bg-slate-900/80 border border-slate-800/80 backdrop-blur rounded-xl p-2.5 shadow-lg pointer-events-auto text-[11px] flex flex-col gap-1.5 max-w-[240px]">
-          <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Map Trajectory Legend</div>
+        <!-- Optional Second Target Card for Dual System Mode (Matching Image 3 yellow target) -->
+        <div id="targetSecondCard" class="bg-slate-950/90 border-2 border-yellow-500 rounded-lg p-2 shadow-2xl pointer-events-auto min-w-[220px] hidden">
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-mono font-bold text-[11px] text-yellow-400 uppercase tracking-wider">Depression (Remnant Senyar)</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-yellow-600/30 text-yellow-300 border border-yellow-500">DEP</span>
+          </div>
+          <div class="mt-0.5 flex items-baseline gap-2">
+            <span class="font-mono text-xs font-bold text-white">3.6°N / 99.8°E</span>
+            <span class="text-[10px] text-slate-400">Malacca Strait</span>
+          </div>
+        </div>
+
+        <!-- Map Layer Toggles & Legend -->
+        <div class="bg-slate-900/85 border border-slate-800/90 backdrop-blur rounded-xl p-2.5 shadow-xl pointer-events-auto text-[11px] flex flex-col gap-1.5 max-w-[260px]">
+          <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center justify-between">
+            <span>Map Layers & Legend</span>
+            <span class="text-cyan-400 font-mono text-[9px]">INSAT/IMD GRID</span>
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+            <input type="checkbox" id="chkStateBorders" checked class="rounded border-slate-700 bg-slate-800 text-cyan-500">
+            <span>Geopolitical State Boundaries (White)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+            <input type="checkbox" id="chkLatLonGrid" checked class="rounded border-slate-700 bg-slate-800 text-cyan-500">
+            <span>Lat / Lon Graticule Lines (Dashed)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+            <input type="checkbox" id="chkQuadrants" checked class="rounded border-slate-700 bg-slate-800 text-pink-500">
+            <span>IMD Warning Quadrants (WCB/ECB/SWB/SEB)</span>
+          </label>
+
+          <div class="h-px bg-slate-800 my-0.5"></div>
+
+          <!-- Trajectory Legend -->
           <div class="flex items-center gap-2">
             <div class="w-5 h-0.5 bg-cyan-400 rounded"></div>
             <span class="text-slate-300 text-[10px]">Observed Past Track (-18h to 0h)</span>
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-5 h-0.5 border-t-2 border-dashed border-red-500 shadow-sm shadow-red-500/50"></div>
+            <div class="w-5 h-0.5 border-t-2 border-dashed border-red-500 shadow-sm shadow-red-500/80"></div>
             <span class="text-red-400 font-semibold text-[10px] flex items-center gap-1">
               <span>●</span> Predicted Movement (Red Dotted Line)
             </span>
@@ -137,21 +183,21 @@
           </div>
           <div class="flex items-center gap-2">
             <div class="w-3.5 h-3.5 rounded-full border border-red-500/80 bg-red-500/30"></div>
-            <span class="text-slate-300 text-[10px]">Destructive Radius (R50)</span>
+            <span class="text-slate-300 text-[10px]">Destructive Eyewall Radius (R50)</span>
           </div>
         </div>
       </div>
 
       <!-- Bottom Floating Controls: 3D Camera & Playback -->
-      <div class="absolute bottom-4 left-4 z-10 flex items-center gap-2 pointer-events-auto bg-slate-900/85 backdrop-blur border border-slate-800 px-3 py-2 rounded-xl shadow-2xl">
+      <div class="absolute bottom-4 left-4 z-20 flex items-center gap-2 pointer-events-auto bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-2 rounded-xl shadow-2xl">
         <button id="btnPlay" class="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center text-xs font-bold transition shadow-md shadow-blue-600/30">
           ▶
         </button>
         <div class="flex flex-col gap-0.5 px-2">
           <div class="flex justify-between text-[10px] text-slate-400 font-mono">
-            <span>Historical (-18h)</span>
+            <span>-18h Past</span>
             <span id="timeStepLabel" class="text-cyan-400 font-bold">LIVE (T=0h)</span>
-            <span>Forecast (+24h)</span>
+            <span>+24h Forecast</span>
           </div>
           <input type="range" id="timeSlider" min="-18" max="24" step="3" value="0" class="w-48 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
         </div>
@@ -165,14 +211,17 @@
         </button>
       </div>
 
-      <!-- Instruction Hint -->
-      <div class="absolute bottom-4 right-4 z-10 text-[10px] text-slate-500 pointer-events-none hidden md:block bg-slate-950/60 px-2 py-1 rounded border border-slate-900">
-        💡 Drag to 3D rotate • Scroll to zoom • Click waypoints for details
+      <!-- Active Mode Indicator Tag -->
+      <div class="absolute top-3 right-3 z-10 pointer-events-none">
+        <div id="gradcamStatusBadge" class="bg-rose-950/85 border border-rose-500/50 px-3 py-1.5 rounded-lg text-xs font-mono text-rose-300 backdrop-blur shadow-lg flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          <span>GRAD-CAM CONVECTIVE ATTENTION ACTIVE</span>
+        </div>
       </div>
     </div>
 
-    <!-- RIGHT: Divided Into Two Distinct Parts (Top: Live Sensory | Bottom: Predicted) -->
-    <div class="w-[430px] border-l border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-10 shadow-2xl overflow-hidden">
+    <!-- RIGHT SIDEBAR: Divided into Two Distinct Sections (Top: Live Sensory | Bottom: Predicted) -->
+    <div class="w-[430px] border-l border-slate-800 bg-slate-900/95 flex flex-col h-full shrink-0 z-20 shadow-2xl overflow-hidden">
       
       <!-- ======================================================== -->
       <!-- PART 1: LIVE SENSORY DATA (TOP HALF)                    -->
@@ -182,25 +231,25 @@
         <!-- Header -->
         <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 live-beacon"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot"></span>
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Live Sensory Observation Data</h2>
           </div>
           <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">TELEMETRY STREAM</span>
         </div>
 
         <!-- Sensor Status Badges -->
-        <div class="grid grid-cols-3 gap-1.5 mb-3 text-[10px] text-center">
+        <div class="grid grid-cols-3 gap-1.5 mb-3 text-[10px] text-center font-mono">
           <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
-            <span class="text-slate-400 block text-[9px]">SATELLITE IR</span>
-            <span class="text-emerald-400 font-semibold font-mono">10.8µm LOCKED</span>
+            <span class="text-slate-400 block text-[9px]">INSAT-3D IR</span>
+            <span class="text-emerald-400 font-semibold">10.8µm LOCKED</span>
           </div>
           <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
             <span class="text-slate-400 block text-[9px]">OCEAN BUOY</span>
-            <span class="text-emerald-400 font-semibold font-mono">AWS SYNCED</span>
+            <span class="text-emerald-400 font-semibold">AWS SYNCED</span>
           </div>
           <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
-            <span class="text-slate-400 block text-[9px]">COASTAL RADAR</span>
-            <span class="text-blue-400 font-semibold font-mono">DOPPLER 250km</span>
+            <span class="text-slate-400 block text-[9px]">DOPPLER RADAR</span>
+            <span class="text-cyan-400 font-semibold">250km RANGE</span>
           </div>
         </div>
 
@@ -209,30 +258,28 @@
           
           <!-- Sustained Wind -->
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-12 h-12 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Observed Wind Speed</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="liveWindVal" class="text-xl font-bold font-mono text-amber-400">120</span>
-              <span class="text-xs text-amber-400/80 font-mono">kt</span>
-              <span id="liveWindKmh" class="text-[11px] text-slate-400 font-mono ml-1">(222 km/h)</span>
+              <span id="liveWindVal" class="text-xl font-bold font-mono text-amber-400">45</span>
+              <span class="text-xs text-amber-400 font-mono">kt</span>
+              <span id="liveWindKmh" class="text-[11px] text-slate-400 font-mono ml-1">(83 km/h)</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>Peak Gusts:</span>
-              <span id="liveGustVal" class="text-slate-200 font-mono font-semibold">145 kt</span>
+              <span id="liveGustVal" class="text-slate-200 font-mono font-semibold">60 kt</span>
             </div>
           </div>
 
           <!-- Central Surface Pressure -->
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-12 h-12 bg-emerald-500/5 rounded-full blur-xl pointer-events-none"></div>
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Central Surface Pressure</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="livePressureVal" class="text-xl font-bold font-mono text-emerald-400">922</span>
-              <span class="text-xs text-emerald-400/80 font-mono">hPa</span>
+              <span id="livePressureVal" class="text-xl font-bold font-mono text-emerald-400">994</span>
+              <span class="text-xs text-emerald-400 font-mono">hPa</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>Barometric Tendency:</span>
-              <span id="livePressureDrop" class="text-red-400 font-mono font-semibold">−5.2 hPa / 3h</span>
+              <span id="livePressureDrop" class="text-red-400 font-mono font-semibold">−3.8 hPa / 3h</span>
             </div>
           </div>
 
@@ -240,11 +287,11 @@
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Sea Surface Temp (SST)</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="liveSstVal" class="text-lg font-bold font-mono text-orange-400">30.8</span>
-              <span class="text-xs text-orange-400/80">°C</span>
+              <span id="liveSstVal" class="text-lg font-bold font-mono text-orange-400">29.8</span>
+              <span class="text-xs text-orange-400">°C</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
-              <span>High ocean thermal energy</span>
+              <span>Warm tropical waters</span>
             </div>
           </div>
 
@@ -252,12 +299,12 @@
           <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Eye Wall Morphology</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="liveEyeVal" class="text-lg font-bold font-mono text-cyan-400">26</span>
-              <span class="text-xs text-cyan-400/80">km</span>
+              <span id="liveEyeVal" class="text-lg font-bold font-mono text-cyan-400">34</span>
+              <span class="text-xs text-cyan-400">km</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5 flex justify-between">
-              <span>Eyewall Symmetry:</span>
-              <span id="liveSymmetryVal" class="text-emerald-400 font-mono font-semibold">94%</span>
+              <span>Curvature Symmetry:</span>
+              <span id="liveSymmetryVal" class="text-emerald-400 font-mono font-semibold">86%</span>
             </div>
           </div>
         </div>
@@ -266,33 +313,33 @@
         <div class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-2.5 text-[11px] grid grid-cols-3 gap-2 text-center">
           <div>
             <span class="text-slate-400 block text-[9px] uppercase">Rel. Humidity (RH)</span>
-            <span id="liveRhVal" class="font-mono text-slate-200 font-semibold">88%</span>
+            <span id="liveRhVal" class="font-mono text-slate-200 font-semibold">85%</span>
           </div>
           <div>
             <span class="text-slate-400 block text-[9px] uppercase">Wind Shear (VWS)</span>
-            <span id="liveShearVal" class="font-mono text-emerald-400 font-semibold">7.5 kt</span>
+            <span id="liveShearVal" class="font-mono text-emerald-400 font-semibold">8.2 kt</span>
           </div>
           <div>
             <span class="text-slate-400 block text-[9px] uppercase">Forward Motion</span>
-            <span id="liveSpeedVal" class="font-mono text-cyan-400 font-semibold">17 km/h</span>
+            <span id="liveSpeedVal" class="font-mono text-cyan-400 font-semibold">14 km/h</span>
           </div>
         </div>
 
         <div class="mt-2 text-[10px] text-slate-500 flex justify-between items-center">
-          <span>Satellite Sensor Frame ID: <span id="liveFrameId" class="font-mono text-slate-400">2020-05-19T06:00Z</span></span>
-          <span class="text-emerald-400 font-mono">● LIVE CALIBRATED</span>
+          <span>Satellite Channel: <span id="liveFrameId" class="font-mono text-slate-400">INSAT-3D TIR-1</span></span>
+          <span class="text-emerald-400 font-mono">● CALIBRATED</span>
         </div>
       </div>
 
       <!-- ======================================================== -->
       <!-- PART 2: PREDICTED DATA (BOTTOM HALF)                    -->
       <!-- ======================================================== -->
-      <div class="flex-1 flex flex-col overflow-y-auto p-4 bg-slate-950/80">
+      <div class="flex-1 flex flex-col overflow-y-auto p-4 bg-slate-950/85">
         
         <!-- Header with Model Info -->
         <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 pulse-dot"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 live-dot"></span>
             <h2 class="text-xs font-bold uppercase tracking-wider text-blue-400">AI Multi-Task Model Forecast</h2>
           </div>
           <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">GRU + CONVNEXT V2</span>
@@ -302,19 +349,18 @@
         <div class="bg-gradient-to-r from-red-950/40 via-slate-900 to-slate-900 border border-red-500/30 rounded-xl p-3 mb-3">
           <div class="flex items-center justify-between">
             <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">PREDICTED INTENSITY TIER</span>
-            <span id="predConfidence" class="text-[10px] font-mono text-emerald-400 font-semibold">99.2% Confidence</span>
+            <span id="predConfidence" class="text-[10px] font-mono text-emerald-400 font-semibold">98.5% Confidence</span>
           </div>
           <div class="flex items-center justify-between mt-1">
-            <span id="predCategory" class="text-base font-extrabold text-red-400 uppercase tracking-wide">Extremely Severe / Super</span>
-            <span id="predCategoryCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-red-600 text-white">CAT 5</span>
+            <span id="predCategory" class="text-base font-extrabold text-red-400 uppercase tracking-wide">Cyclonic Storm</span>
+            <span id="predCategoryCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-red-600 text-white">CAT 2</span>
           </div>
-          <!-- Category probability distribution bar -->
+          <!-- Probability distribution -->
           <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden flex">
-            <div class="bg-emerald-500 h-full" style="width: 0.1%"></div>
-            <div class="bg-blue-500 h-full" style="width: 0.2%"></div>
+            <div class="bg-blue-500 h-full" style="width: 1.2%"></div>
+            <div class="bg-emerald-500 h-full" style="width: 98.5%"></div>
             <div class="bg-yellow-500 h-full" style="width: 0.2%"></div>
-            <div class="bg-orange-500 h-full" style="width: 0.3%"></div>
-            <div class="bg-red-500 h-full" style="width: 99.2%"></div>
+            <div class="bg-orange-500 h-full" style="width: 0.1%"></div>
           </div>
         </div>
 
@@ -325,13 +371,13 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Forecasted Wind</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predWindVal" class="text-lg font-bold font-mono text-amber-400">128</span>
+              <span id="predWindVal" class="text-lg font-bold font-mono text-amber-400">52</span>
               <span class="text-xs text-amber-400 font-mono">kt</span>
-              <span id="predWindDelta" class="text-[10px] font-mono text-red-400 ml-1">(+8 kt in 6h)</span>
+              <span id="predWindDelta" class="text-[10px] font-mono text-red-400 ml-1">(+7 kt in 6h)</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>+12h Intensity:</span>
-              <span id="predWind12h" class="text-amber-300 font-mono font-semibold">134 kt</span>
+              <span id="predWind12h" class="text-amber-300 font-mono font-semibold">60 kt</span>
             </div>
           </div>
 
@@ -339,13 +385,13 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Predicted Pressure</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predPressureVal" class="text-lg font-bold font-mono text-emerald-400">915</span>
+              <span id="predPressureVal" class="text-lg font-bold font-mono text-emerald-400">988</span>
               <span class="text-xs text-emerald-400 font-mono">hPa</span>
-              <span id="predPresDelta" class="text-[10px] font-mono text-red-400 ml-1">(−7 hPa)</span>
+              <span id="predPresDelta" class="text-[10px] font-mono text-red-400 ml-1">(−6 hPa)</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
               <span>Intensity Trend:</span>
-              <span id="predTrendLabel" class="text-red-400 font-mono font-semibold">INTENSIFYING (RI)</span>
+              <span id="predTrendLabel" class="text-red-400 font-mono font-semibold">INTENSIFYING</span>
             </div>
           </div>
 
@@ -353,7 +399,7 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Danger Radius (R30)</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predR30Val" class="text-base font-bold font-mono text-yellow-400">320</span>
+              <span id="predR30Val" class="text-base font-bold font-mono text-yellow-400">180</span>
               <span class="text-xs text-yellow-400 font-mono">km</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
@@ -365,29 +411,29 @@
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Storm Radius (R50)</span>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span id="predR50Val" class="text-base font-bold font-mono text-red-400">135</span>
+              <span id="predR50Val" class="text-base font-bold font-mono text-red-400">65</span>
               <span class="text-xs text-red-400 font-mono">km</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-0.5">
-              <span>Severe eyewall hazard</span>
+              <span>Inner core danger area</span>
             </div>
           </div>
         </div>
 
-        <!-- Landfall Probability & ETA Alert Card -->
+        <!-- Coastline Landfall Warning Alert -->
         <div class="bg-slate-900/90 border border-red-500/30 rounded-xl p-2.5 mb-3 flex items-center justify-between">
           <div>
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Coastline Landfall Forecast</span>
             <div class="flex items-center gap-2 mt-0.5">
-              <span id="predLandfallProb" class="text-base font-bold font-mono text-red-400">96.8%</span>
+              <span id="predLandfallProb" class="text-base font-bold font-mono text-red-400">92.4%</span>
               <span class="text-xs text-slate-300">Probability</span>
             </div>
-            <span id="predLandfallTarget" class="text-[10px] text-red-300 block">Odisha / West Bengal Coast</span>
+            <span id="predLandfallTarget" class="text-[10px] text-red-300 block">Tamil Nadu / Andhra Coast</span>
           </div>
           <div class="text-right">
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Shore Arrival ETA</span>
-            <span id="predLandfallEta" class="text-lg font-bold font-mono text-amber-400">14.5 hrs</span>
-            <span class="text-[10px] text-slate-400 block">Est. Landfall Time</span>
+            <span id="predLandfallEta" class="text-lg font-bold font-mono text-amber-400">22.5 hrs</span>
+            <span class="text-[10px] text-slate-400 block">Projected Landfall</span>
           </div>
         </div>
 
@@ -395,7 +441,7 @@
         <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex-1 flex flex-col min-h-[110px]">
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-[10px] uppercase font-bold text-red-400 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-red-500 pulse-dot"></span>
+              <span class="w-2 h-2 rounded-full bg-red-500 live-dot"></span>
               Predicted Movement Path (Red Dotted Line)
             </span>
             <span class="text-[9px] font-mono text-slate-400">+6h / +12h / +24h</span>
@@ -424,32 +470,189 @@
 
   </div>
 
-  <!-- Interactive 3D Canvas Rendering & Simulation Logic -->
+  <!-- Interactive 3D Geospatial Engine & Real-World Satellite Cartography -->
   <script>
     // =========================================================================
-    // 1. Physical Scenario Datasets (Real Holdout Tracks & Simulated Basins)
+    // 1. Physical Scenario Datasets (Matching Reference Images 1, 2, 3)
     // =========================================================================
     const SCENARIOS = {
-      bob: {
-        name: "SUPER CYCLONE AMPHAN",
-        basin: "Bay of Bengal",
-        catName: "Extremely Severe / Super",
-        catCode: "CAT 5",
-        catLevel: 4,
-        confidence: "99.4%",
+      // REFERENCE IMAGE 1 & 3: Cyclonic Storm Ditwah in South Bay of Bengal
+      ditwah: {
+        name: "Cyclonic Storm Ditwah",
+        basin: "South Bay of Bengal",
+        catName: "Cyclonic Storm",
+        catCode: "CS",
+        confidence: "98.5%",
+        obs: {
+          lat: 6.9, lon: 87.9,
+          wind: 45, gust: 60,
+          pressure: 994, drop: "−3.8 hPa / 3h",
+          sst: 29.8, rh: 85, shear: 8.2, speed: 14,
+          eye: 34, symmetry: 86,
+          frame: "INSAT-3D TIR-1"
+        },
+        pred: {
+          wind: 52, deltaWind: "+7 kt in 6h", wind12h: 60,
+          pressure: 988, deltaPres: "−6 hPa", trend: "INTENSIFYING",
+          r30: 180, r50: 65,
+          landfallProb: "92.4%", eta: "22.5 hrs", target: "Tamil Nadu / Andhra Coast",
+          waypoints: [
+            { time: "+3h", lat: 7.6, lon: 87.2, wind: 48, pressure: 991 },
+            { time: "+6h", lat: 8.4, lon: 86.5, wind: 52, pressure: 988 },
+            { time: "+9h", lat: 9.3, lon: 85.8, wind: 56, pressure: 985 },
+            { time: "+12h", lat: 10.2, lon: 85.1, wind: 60, pressure: 982 },
+            { time: "+18h", lat: 11.5, lon: 84.0, wind: 64, pressure: 978 },
+            { time: "+24h", lat: 12.8, lon: 82.8, wind: 68, pressure: 974 }
+          ],
+          pastTrack: [
+            { time: "-18h", lat: 5.2, lon: 89.8, wind: 30 },
+            { time: "-12h", lat: 5.8, lon: 89.1, wind: 35 },
+            { time: "-6h", lat: 6.3, lon: 88.5, wind: 40 },
+            { time: "0h", lat: 6.9, lon: 87.9, wind: 45 }
+          ]
+        },
+        camTarget: { lat: 8.0, lon: 86.0 }
+      },
+
+      // REFERENCE IMAGE 2: Enhanced False-Color Thermal Deep Convection (WCB Sector)
+      coastal_wcb: {
+        name: "Deep Convective System (WCB)",
+        basin: "West Central Bay of Bengal",
+        catName: "Severe Cyclonic Storm",
+        catCode: "SCS",
+        confidence: "99.1%",
+        obs: {
+          lat: 14.2, lon: 83.5,
+          wind: 58, gust: 75,
+          pressure: 982, drop: "−4.5 hPa / 3h",
+          sst: 30.2, rh: 88, shear: 7.0, speed: 18,
+          eye: 28, symmetry: 91,
+          frame: "INSAT-3D RGB Composite"
+        },
+        pred: {
+          wind: 66, deltaWind: "+8 kt in 6h", wind12h: 75,
+          pressure: 975, deltaPres: "−7 hPa", trend: "RAPID DEEPENING",
+          r30: 220, r50: 90,
+          landfallProb: "97.5%", eta: "12.0 hrs", target: "Coastal Andhra Pradesh (Machilipatnam)",
+          waypoints: [
+            { time: "+3h", lat: 14.8, lon: 82.8, wind: 62, pressure: 978 },
+            { time: "+6h", lat: 15.4, lon: 82.1, wind: 66, pressure: 975 },
+            { time: "+9h", lat: 15.9, lon: 81.5, wind: 70, pressure: 972 },
+            { time: "+12h", lat: 16.3, lon: 81.0, wind: 75, pressure: 968 },
+            { time: "+18h", lat: 16.9, lon: 80.2, wind: 55, pressure: 985 },
+            { time: "+24h", lat: 17.5, lon: 79.5, wind: 35, pressure: 998 }
+          ],
+          pastTrack: [
+            { time: "-18h", lat: 11.8, lon: 85.2, wind: 40 },
+            { time: "-12h", lat: 12.6, lon: 84.7, wind: 45 },
+            { time: "-6h", lat: 13.4, lon: 84.1, wind: 52 },
+            { time: "0h", lat: 14.2, lon: 83.5, wind: 58 }
+          ]
+        },
+        camTarget: { lat: 15.0, lon: 83.0 }
+      },
+
+      // REFERENCE IMAGE 3: Dual-System Interaction (Ditwah + Remnant Senyar)
+      dual_vortex: {
+        name: "Dual Cyclone Interaction (Ditwah + Senyar)",
+        basin: "Bay of Bengal & Malacca Strait",
+        catName: "Multi-Vortex System",
+        catCode: "CS+DEP",
+        confidence: "97.8%",
+        obs: {
+          lat: 6.9, lon: 87.9,
+          wind: 45, gust: 60,
+          pressure: 994, drop: "−3.5 hPa / 3h",
+          sst: 29.5, rh: 84, shear: 9.0, speed: 15,
+          eye: 35, symmetry: 84,
+          frame: "INSAT-3D Synoptic Wide"
+        },
+        pred: {
+          wind: 50, deltaWind: "+5 kt in 6h", wind12h: 55,
+          pressure: 990, deltaPres: "−4 hPa", trend: "BINARY INTERACTION",
+          r30: 175, r50: 60,
+          landfallProb: "88.0%", eta: "24.0 hrs", target: "South India / Sri Lanka",
+          waypoints: [
+            { time: "+3h", lat: 7.5, lon: 87.3, wind: 47, pressure: 992 },
+            { time: "+6h", lat: 8.2, lon: 86.6, wind: 50, pressure: 990 },
+            { time: "+9h", lat: 9.0, lon: 85.9, wind: 52, pressure: 988 },
+            { time: "+12h", lat: 9.8, lon: 85.2, wind: 55, pressure: 985 },
+            { time: "+18h", lat: 11.0, lon: 84.1, wind: 58, pressure: 982 },
+            { time: "+24h", lat: 12.2, lon: 83.0, wind: 60, pressure: 980 }
+          ],
+          pastTrack: [
+            { time: "-18h", lat: 5.1, lon: 90.0, wind: 30 },
+            { time: "-12h", lat: 5.7, lon: 89.2, wind: 35 },
+            { time: "-6h", lat: 6.3, lon: 88.6, wind: 40 },
+            { time: "0h", lat: 6.9, lon: 87.9, wind: 45 }
+          ]
+        },
+        secondSystem: {
+          name: "Depression (Remnant Senyar)",
+          lat: 3.6, lon: 99.8,
+          wind: 25, pressure: 1004
+        },
+        camTarget: { lat: 8.5, lon: 92.0 }
+      },
+
+      // Arabian Sea Biparjoy
+      biparjoy: {
+        name: "Extremely Severe Cyclone Biparjoy",
+        basin: "Arabian Sea",
+        catName: "Extremely Severe",
+        catCode: "ESCS",
+        confidence: "99.2%",
+        obs: {
+          lat: 19.6, lon: 67.2,
+          wind: 90, gust: 110,
+          pressure: 954, drop: "−4.0 hPa / 3h",
+          sst: 29.5, rh: 82, shear: 10.5, speed: 10,
+          eye: 30, symmetry: 90,
+          frame: "INSAT-3D TIR-1"
+        },
+        pred: {
+          wind: 95, deltaWind: "+5 kt in 6h", wind12h: 92,
+          pressure: 950, deltaPres: "−4 hPa", trend: "STEADY INTENSE",
+          r30: 280, r50: 95,
+          landfallProb: "96.0%", eta: "30.0 hrs", target: "Gujarat / Saurashtra Coast",
+          waypoints: [
+            { time: "+3h", lat: 20.1, lon: 67.1, wind: 92, pressure: 952 },
+            { time: "+6h", lat: 20.6, lon: 67.2, wind: 95, pressure: 950 },
+            { time: "+9h", lat: 21.2, lon: 67.5, wind: 94, pressure: 951 },
+            { time: "+12h", lat: 21.8, lon: 67.9, wind: 92, pressure: 953 },
+            { time: "+18h", lat: 22.8, lon: 68.4, wind: 85, pressure: 960 },
+            { time: "+24h", lat: 23.5, lon: 68.9, wind: 70, pressure: 975 }
+          ],
+          pastTrack: [
+            { time: "-18h", lat: 16.8, lon: 67.5, wind: 75 },
+            { time: "-12h", lat: 17.7, lon: 67.4, wind: 80 },
+            { time: "-6h", lat: 18.6, lon: 67.3, wind: 85 },
+            { time: "0h", lat: 19.6, lon: 67.2, wind: 90 }
+          ]
+        },
+        camTarget: { lat: 20.0, lon: 67.5 }
+      },
+
+      // Super Cyclone Amphan
+      amphan: {
+        name: "Super Cyclone Amphan",
+        basin: "North Bay of Bengal",
+        catName: "Super Cyclone",
+        catCode: "SuCS",
+        confidence: "99.8%",
         obs: {
           lat: 18.2, lon: 86.9,
           wind: 120, gust: 145,
-          pressure: 922, drop: "−5.2 hPa / 3h",
+          pressure: 922, drop: "−5.5 hPa / 3h",
           sst: 30.8, rh: 88, shear: 7.5, speed: 17,
-          eye: 26, symmetry: 95,
-          frame: "2020-05-19T06:00Z"
+          eye: 24, symmetry: 96,
+          frame: "INSAT-3D RGB Composite"
         },
         pred: {
           wind: 128, deltaWind: "+8 kt in 6h", wind12h: 134,
-          pressure: 915, deltaPres: "−7 hPa", trend: "INTENSIFYING (RI)",
+          pressure: 915, deltaPres: "−7 hPa", trend: "SUPER CYCLONE",
           r30: 320, r50: 135,
-          landfallProb: "96.8%", eta: "14.5 hrs", target: "Odisha / West Bengal Coast",
+          landfallProb: "98.5%", eta: "14.5 hrs", target: "Odisha / West Bengal Coast",
           waypoints: [
             { time: "+3h", lat: 18.8, lon: 87.2, wind: 124, pressure: 918 },
             { time: "+6h", lat: 19.5, lon: 87.5, wind: 128, pressure: 915 },
@@ -465,289 +668,98 @@
             { time: "0h", lat: 18.2, lon: 86.9, wind: 120 }
           ]
         },
-        camTarget: { lat: 18.2, lon: 86.9 }
-      },
-
-      arb: {
-        name: "EXTREMELY SEVERE CYCLONE BIPARJOY",
-        basin: "Arabian Sea",
-        catName: "Very Severe Cyclonic Storm",
-        catCode: "CAT 4",
-        catLevel: 3,
-        confidence: "98.7%",
-        obs: {
-          lat: 19.6, lon: 67.2,
-          wind: 90, gust: 110,
-          pressure: 954, drop: "−3.1 hPa / 3h",
-          sst: 29.5, rh: 82, shear: 11.2, speed: 9,
-          eye: 32, symmetry: 88,
-          frame: "2023-06-12T12:00Z"
-        },
-        pred: {
-          wind: 95, deltaWind: "+5 kt in 6h", wind12h: 92,
-          pressure: 950, deltaPres: "−4 hPa", trend: "STEADY (SLOW DEEPENING)",
-          r30: 280, r50: 95,
-          landfallProb: "91.2%", eta: "31.0 hrs", target: "Gujarat / Saurashtra Coast",
-          waypoints: [
-            { time: "+3h", lat: 20.0, lon: 67.1, wind: 92, pressure: 952 },
-            { time: "+6h", lat: 20.5, lon: 67.2, wind: 95, pressure: 950 },
-            { time: "+9h", lat: 21.1, lon: 67.4, wind: 94, pressure: 951 },
-            { time: "+12h", lat: 21.8, lon: 67.8, wind: 92, pressure: 953 },
-            { time: "+18h", lat: 22.8, lon: 68.3, wind: 85, pressure: 960 },
-            { time: "+24h", lat: 23.5, lon: 68.8, wind: 70, pressure: 975 }
-          ],
-          pastTrack: [
-            { time: "-18h", lat: 16.8, lon: 67.5, wind: 75 },
-            { time: "-12h", lat: 17.7, lon: 67.4, wind: 80 },
-            { time: "-6h", lat: 18.6, lon: 67.3, wind: 85 },
-            { time: "0h", lat: 19.6, lon: 67.2, wind: 90 }
-          ]
-        },
-        camTarget: { lat: 19.6, lon: 67.2 }
-      },
-
-      wnp: {
-        name: "SUPER TYPHOON HAIYAN",
-        basin: "Western North Pacific",
-        catName: "Extremely Severe / Super",
-        catCode: "CAT 5",
-        catLevel: 4,
-        confidence: "99.9%",
-        obs: {
-          lat: 10.6, lon: 129.4,
-          wind: 170, gust: 205,
-          pressure: 895, drop: "−8.0 hPa / 3h",
-          sst: 31.2, rh: 92, shear: 5.0, speed: 32,
-          eye: 18, symmetry: 99,
-          frame: "2013-11-07T18:00Z"
-        },
-        pred: {
-          wind: 175, deltaWind: "+5 kt in 6h", wind12h: 165,
-          pressure: 890, deltaPres: "−5 hPa", trend: "PEAK INTENSITY / PINHOLE EYE",
-          r30: 360, r50: 170,
-          landfallProb: "100.0%", eta: "6.5 hrs", target: "Guiuan, Eastern Samar (Philippines)",
-          waypoints: [
-            { time: "+3h", lat: 10.8, lon: 127.8, wind: 175, pressure: 890 },
-            { time: "+6h", lat: 11.0, lon: 126.1, wind: 175, pressure: 890 },
-            { time: "+9h", lat: 11.2, lon: 124.5, wind: 165, pressure: 905 },
-            { time: "+12h", lat: 11.4, lon: 123.0, wind: 155, pressure: 915 },
-            { time: "+18h", lat: 11.8, lon: 120.0, wind: 135, pressure: 935 },
-            { time: "+24h", lat: 12.5, lon: 117.0, wind: 120, pressure: 950 }
-          ],
-          pastTrack: [
-            { time: "-18h", lat: 8.9, lon: 136.2, wind: 130 },
-            { time: "-12h", lat: 9.4, lon: 133.9, wind: 150 },
-            { time: "-6h", lat: 10.0, lon: 131.6, wind: 165 },
-            { time: "0h", lat: 10.6, lon: 129.4, wind: 170 }
-          ]
-        },
-        camTarget: { lat: 10.6, lon: 129.4 }
-      },
-
-      scs: {
-        name: "SUPER TYPHOON YAGI",
-        basin: "South China Sea",
-        catName: "Extremely Severe / Super",
-        catCode: "CAT 5",
-        catLevel: 4,
-        confidence: "99.1%",
-        obs: {
-          lat: 19.4, lon: 113.8,
-          wind: 130, gust: 160,
-          pressure: 920, drop: "−6.4 hPa / 3h",
-          sst: 30.5, rh: 90, shear: 6.8, speed: 21,
-          eye: 22, symmetry: 96,
-          frame: "2024-09-05T12:00Z"
-        },
-        pred: {
-          wind: 135, deltaWind: "+5 kt in 6h", wind12h: 125,
-          pressure: 915, deltaPres: "−5 hPa", trend: "RAPID INTENSIFICATION",
-          r30: 310, r50: 120,
-          landfallProb: "99.5%", eta: "11.2 hrs", target: "Wenchang, Hainan / Leizhou Peninsula",
-          waypoints: [
-            { time: "+3h", lat: 19.6, lon: 112.5, wind: 135, pressure: 915 },
-            { time: "+6h", lat: 19.8, lon: 111.1, wind: 135, pressure: 915 },
-            { time: "+9h", lat: 20.0, lon: 109.8, wind: 125, pressure: 928 },
-            { time: "+12h", lat: 20.3, lon: 108.5, wind: 115, pressure: 940 },
-            { time: "+18h", lat: 20.8, lon: 106.0, wind: 85, pressure: 965 },
-            { time: "+24h", lat: 21.4, lon: 103.5, wind: 45, pressure: 995 }
-          ],
-          pastTrack: [
-            { time: "-18h", lat: 18.8, lon: 118.2, wind: 75 },
-            { time: "-12h", lat: 19.0, lon: 116.7, wind: 95 },
-            { time: "-6h", lat: 19.2, lon: 115.2, wind: 115 },
-            { time: "0h", lat: 19.4, lon: 113.8, wind: 130 }
-          ]
-        },
-        camTarget: { lat: 19.4, lon: 113.8 }
+        camTarget: { lat: 19.5, lon: 87.5 }
       }
     };
 
     // =========================================================================
-    // 2. Procedural Random Occurrence Generator
+    // 2. Real-World India Coastline, States & Maritime Quadrants (Vector Geometry)
     // =========================================================================
-    function generateRandomOccurrence() {
-      const basins = [
-        { name: "Bay of Bengal", minLat: 8, maxLat: 20, minLon: 82, maxLon: 92, dLat: 0.35, dLon: 0.15, coast: "Eastern India / Bangladesh Coast" },
-        { name: "Arabian Sea", minLat: 10, maxLat: 20, minLon: 60, maxLon: 72, dLat: 0.30, dLon: -0.10, coast: "Gujarat / Oman Coast" },
-        { name: "Western North Pacific", minLat: 9, maxLat: 24, minLon: 128, maxLon: 150, dLat: 0.20, dLon: -0.50, coast: "Philippines / Ryukyu Arc" },
-        { name: "South China Sea", minLat: 12, maxLat: 21, minLon: 111, maxLon: 118, dLat: 0.15, dLon: -0.40, coast: "Hainan / Southern China Coast" }
-      ];
-      const b = basins[Math.floor(Math.random() * basins.length)];
-      const lat0 = +(b.minLat + Math.random() * (b.maxLat - b.minLat)).toFixed(1);
-      const lon0 = +(b.minLon + Math.random() * (b.maxLon - b.minLon)).toFixed(1);
-      const wind0 = Math.floor(65 + Math.random() * 85);
-      const pres0 = Math.floor(1010 - Math.pow(wind0 / 6.7, 1 / 0.644));
+    // Real India coastline and internal state boundaries
+    const INDIA_COASTLINE = [
+      [24.0, 68.0], [23.5, 68.3], [22.8, 69.2], [22.4, 70.0], [21.5, 69.5],
+      [20.8, 70.4], [20.9, 71.8], [21.7, 72.3], [21.2, 72.8], [20.0, 72.8],
+      [18.9, 72.8], [17.5, 73.2], [15.5, 73.8], [14.0, 74.5], [12.9, 74.8],
+      [11.5, 75.5], [10.0, 76.2], [8.8, 76.6], [8.1, 77.5], [8.5, 78.1],
+      [9.2, 79.2], [9.8, 79.2], [10.3, 79.8], [11.5, 79.8], [12.0, 79.8],
+      [13.1, 80.3], [14.0, 80.1], [15.5, 80.2], [16.0, 81.0], [16.5, 82.2],
+      [17.3, 83.0], [17.7, 83.3], [18.3, 84.1], [19.3, 85.0], [19.8, 85.8],
+      [20.3, 86.7], [21.5, 87.0], [21.7, 87.5], [21.6, 88.2], [22.0, 89.0]
+    ];
 
-      let catName, catCode, catLevel;
-      if (wind0 < 34) { catName = "Depression"; catCode = "CAT 1"; catLevel = 0; }
-      else if (wind0 < 48) { catName = "Cyclonic Storm"; catCode = "CAT 2"; catLevel = 1; }
-      else if (wind0 < 64) { catName = "Severe Cyclonic Storm"; catCode = "CAT 3"; catLevel = 2; }
-      else if (wind0 < 90) { catName = "Very Severe Cyclonic Storm"; catCode = "CAT 4"; catLevel = 3; }
-      else { catName = "Extremely Severe / Super"; catCode = "CAT 5"; catLevel = 4; }
+    const SRI_LANKA = [
+      [9.8, 80.2], [9.2, 80.8], [8.6, 81.2], [7.7, 81.7], [6.9, 81.8],
+      [6.0, 81.0], [5.9, 80.5], [6.2, 80.0], [7.0, 79.8], [8.0, 79.8],
+      [8.6, 79.8], [9.5, 80.0], [9.8, 80.2]
+    ];
 
-      const dWind = Math.floor(4 + Math.random() * 12);
-      const waypoints = [];
-      for (let step = 1; step <= 6; step++) {
-        const hrs = step * (step <= 4 ? 3 : 6);
-        const wLat = +(lat0 + b.dLat * (hrs / 3) + (Math.random() - 0.5) * 0.3).toFixed(1);
-        const wLon = +(lon0 + b.dLon * (hrs / 3) + (Math.random() - 0.5) * 0.3).toFixed(1);
-        const wWind = Math.min(160, wind0 + Math.floor(dWind * (hrs / 12) + (Math.random() - 0.5) * 4));
-        const wPres = Math.floor(1010 - Math.pow(wWind / 6.7, 1 / 0.644));
-        waypoints.push({ time: `+${hrs}h`, lat: wLat, lon: wLon, wind: wWind, pressure: wPres });
-      }
+    const BANGLADESH_MYANMAR = [
+      [22.0, 89.0], [22.3, 89.8], [22.5, 90.5], [22.8, 91.2], [22.3, 91.8],
+      [21.5, 92.0], [20.8, 92.4], [20.0, 92.9], [19.0, 93.6], [18.0, 94.2],
+      [16.5, 94.3], [16.0, 95.2], [15.7, 96.2], [16.5, 97.5], [15.0, 97.8],
+      [13.5, 98.2], [11.5, 98.5], [9.8, 98.5]
+    ];
 
-      const pastTrack = [
-        { time: "-18h", lat: +(lat0 - b.dLat * 6).toFixed(1), lon: +(lon0 - b.dLon * 6).toFixed(1), wind: Math.max(30, wind0 - 30) },
-        { time: "-12h", lat: +(lat0 - b.dLat * 4).toFixed(1), lon: +(lon0 - b.dLon * 4).toFixed(1), wind: Math.max(40, wind0 - 20) },
-        { time: "-6h", lat: +(lat0 - b.dLat * 2).toFixed(1), lon: +(lon0 - b.dLon * 2).toFixed(1), wind: Math.max(50, wind0 - 10) },
-        { time: "0h", lat: lat0, lon: lon0, wind: wind0 }
-      ];
+    const ANDAMAN_NICOBAR = [
+      [[13.3, 93.0], [12.8, 92.8], [12.2, 92.7], [11.6, 92.7], [10.5, 92.5]], // Andaman
+      [[9.2, 92.8], [8.5, 93.5], [7.5, 93.7], [7.0, 93.9]]                    // Nicobar
+    ];
 
-      return {
-        name: `OCCURRENCE_${Math.floor(1000 + Math.random() * 9000)}`,
-        basin: b.name,
-        catName: catName,
-        catCode: catCode,
-        catLevel: catLevel,
-        confidence: `${(95.0 + Math.random() * 4.9).toFixed(1)}%`,
-        obs: {
-          lat: lat0, lon: lon0,
-          wind: wind0, gust: Math.floor(wind0 * 1.25),
-          pressure: pres0, drop: `−${(2.5 + Math.random() * 4.5).toFixed(1)} hPa / 3h`,
-          sst: +(28.5 + Math.random() * 2.8).toFixed(1),
-          rh: Math.floor(78 + Math.random() * 16),
-          shear: +(5.0 + Math.random() * 9.0).toFixed(1),
-          speed: Math.floor(12 + Math.random() * 15),
-          eye: Math.floor(20 + Math.random() * 25),
-          symmetry: Math.floor(82 + Math.random() * 16),
-          frame: new Date().toISOString().substring(0, 16) + "Z"
-        },
-        pred: {
-          wind: wind0 + dWind,
-          deltaWind: `+${dWind} kt in 6h`,
-          wind12h: wind0 + dWind + Math.floor(dWind * 0.7),
-          pressure: pres0 - Math.floor(dWind * 0.8),
-          deltaPres: `−${Math.floor(dWind * 0.8)} hPa`,
-          trend: dWind >= 15 ? "RAPID INTENSIFICATION (RI)" : "STEADY INTENSIFICATION",
-          r30: Math.floor(wind0 * 2.6 + 40),
-          r50: Math.floor(wind0 * 1.1),
-          landfallProb: `${(85 + Math.random() * 14).toFixed(1)}%`,
-          eta: `${(10 + Math.random() * 25).toFixed(1)} hrs`,
-          target: b.coast,
-          waypoints: waypoints,
-          pastTrack: pastTrack
-        },
-        camTarget: { lat: lat0, lon: lon0 }
-      };
-    }
+    // India internal state borders (matching Reference Image 1 & 2)
+    const INDIA_STATE_BORDERS = [
+      // Gujarat - Maharashtra border
+      [[20.2, 72.8], [20.5, 73.5], [21.2, 74.0], [21.8, 74.2]],
+      // Maharashtra - Karnataka - Goa
+      [[15.8, 73.7], [16.0, 74.5], [16.5, 75.5], [17.5, 76.5]],
+      // Karnataka - Kerala
+      [[12.8, 74.9], [12.4, 75.3], [12.0, 75.8], [11.8, 76.3]],
+      // Kerala - Tamil Nadu
+      [[11.8, 76.3], [10.8, 76.7], [9.8, 77.2], [8.8, 77.3], [8.1, 77.5]],
+      // Tamil Nadu - Andhra Pradesh
+      [[13.5, 80.2], [13.2, 79.5], [13.0, 78.5], [12.8, 78.3]],
+      // Andhra Pradesh - Odisha
+      [[19.0, 84.7], [18.8, 84.0], [18.5, 83.2], [18.2, 82.5]],
+      // Odisha - West Bengal
+      [[21.6, 87.2], [22.0, 87.0], [22.5, 86.8]],
+      // Northern borders (Rajasthan, MP, UP, Bihar)
+      [[24.5, 71.0], [26.0, 73.0], [28.0, 75.0], [28.5, 77.0]],
+      [[21.8, 74.2], [22.5, 77.0], [23.5, 81.0], [22.8, 84.0]],
+      [[24.0, 83.0], [25.5, 85.0], [26.0, 88.0]]
+    ];
 
-    // =========================================================================
-    // 3. Global Coastline Geometry (Optimized Multi-Polygon Vector Mesh)
-    // =========================================================================
-    // Key coastline polygons around global ocean basins (Indian Ocean, Asia, Pacific, etc.)
-    const COASTLINES = [
-      // Indian Subcontinent (Gujarat, Southern tip, Bengal, Odisha, Bangladesh)
-      [
-        [24.0, 68.0], [22.5, 69.5], [21.0, 70.0], [20.7, 72.8], [19.0, 72.8],
-        [15.5, 73.8], [13.0, 74.8], [9.9, 76.2], [8.1, 77.5], [9.2, 79.2],
-        [11.9, 79.8], [13.1, 80.3], [16.0, 81.0], [17.7, 83.3], [19.8, 85.8],
-        [21.5, 87.0], [22.0, 89.0], [22.5, 91.5], [21.0, 92.2], [18.0, 94.0],
-        [16.0, 96.0], [14.0, 98.0], [10.0, 99.0], [7.0, 100.0], [4.0, 103.0],
-        [1.3, 104.0], [2.5, 102.0], [5.0, 100.3], [10.0, 98.5], [15.0, 97.5]
-      ],
-      // Sri Lanka
-      [
-        [9.8, 80.2], [8.5, 81.2], [6.9, 81.8], [5.9, 80.5], [7.0, 79.8], [8.5, 79.8], [9.8, 80.2]
-      ],
-      // Arabian Peninsula & Persian Gulf
-      [
-        [12.5, 43.5], [14.5, 49.5], [17.0, 55.0], [22.5, 59.8], [25.0, 56.5],
-        [26.5, 54.0], [28.0, 50.0], [30.0, 48.0], [26.0, 56.0], [23.5, 58.5]
-      ],
-      // East Asia (China, Vietnam, Korea)
-      [
-        [21.5, 108.0], [20.0, 106.0], [16.0, 108.0], [12.0, 109.0], [10.5, 107.0],
-        [10.0, 105.0], [12.0, 102.5], [14.0, 101.0], [21.0, 108.5], [22.5, 114.0],
-        [24.5, 118.5], [28.0, 121.5], [31.2, 121.5], [35.0, 119.5], [37.5, 122.0],
-        [39.0, 124.0], [38.0, 127.0], [35.0, 129.0], [37.0, 129.5], [40.0, 128.0]
-      ],
-      // Japan Islands
-      [
-        [31.0, 130.5], [33.5, 133.5], [35.0, 136.0], [35.5, 140.0], [38.5, 141.5],
-        [41.5, 141.0], [43.5, 144.5], [45.5, 142.0], [43.0, 141.0], [40.5, 139.8],
-        [36.5, 136.5], [34.5, 131.0], [31.0, 130.5]
-      ],
-      // Philippines Archipelago
-      [
-        [18.5, 121.0], [16.0, 120.0], [14.5, 121.0], [13.0, 124.0], [11.0, 125.0],
-        [8.0, 126.0], [6.0, 125.5], [8.0, 123.0], [10.0, 122.5], [14.0, 120.5], [18.5, 121.0]
-      ],
-      // Indonesia & Sunda Islands
-      [
-        [5.5, 95.5], [2.0, 99.0], [-3.0, 102.0], [-6.0, 105.5], [-7.5, 110.0],
-        [-8.5, 115.0], [-8.5, 120.0], [-8.5, 126.0], [-2.0, 121.0], [1.0, 125.0],
-        [0.0, 117.0], [-3.5, 114.5], [1.0, 110.0], [4.0, 117.0], [6.0, 116.0]
-      ],
-      // Australia (Northern / Western coasts)
-      [
-        [-12.0, 131.0], [-15.0, 136.0], [-17.5, 140.5], [-11.0, 142.5], [-16.0, 145.5],
-        [-23.0, 150.5], [-28.0, 153.5], [-34.0, 151.0], [-38.0, 148.0], [-38.0, 144.0],
-        [-35.0, 136.0], [-32.0, 128.0], [-34.0, 122.0], [-32.0, 115.5], [-25.0, 113.0],
-        [-20.0, 118.0], [-15.0, 124.0], [-12.0, 131.0]
-      ],
-      // Africa East Coast
-      [
-        [11.5, 51.0], [4.0, 48.0], [-4.0, 39.5], [-15.0, 40.5], [-26.0, 33.0],
-        [-34.0, 26.0], [-34.5, 20.0], [-30.0, 17.5]
-      ]
+    // IMD Marine Warning Quadrants (Reference Image 2 pink boxes)
+    const IMD_QUADRANTS = [
+      { name: "WCB", label: "West Central Bay", latMin: 15.0, latMax: 20.5, lonMin: 80.5, lonMax: 88.5 },
+      { name: "ECB", label: "East Central Bay", latMin: 15.0, latMax: 20.5, lonMin: 88.5, lonMax: 95.0 },
+      { name: "SWB", label: "South West Bay", latMin: 5.0, latMax: 15.0, lonMin: 80.0, lonMax: 88.5 },
+      { name: "SEB", label: "South East Bay", latMin: 5.0, latMax: 15.0, lonMin: 88.5, lonMax: 95.0 }
     ];
 
     // =========================================================================
-    // 4. 3D Globe & Map Renderer Engine
+    // 3. 3D Geospatial Real-World Satellite Engine
     // =========================================================================
-    class Cyclone3DGlobe {
+    class SatelliteGeospatialSimulation {
       constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext("2d");
-        
-        // 3D Camera / Orientation state
-        this.rotLon = 87.0;  // Center on Bay of Bengal initially
-        this.rotLat = 18.0;  // Center latitude
-        this.zoom = 1.0;
-        this.minZoom = 0.55;
-        this.maxZoom = 3.5;
+
+        // Camera state
+        this.rotLon = 86.0;  // Centered on Bay of Bengal
+        this.rotLat = 12.0;
+        this.zoom = 1.35;
+        this.minZoom = 0.6;
+        this.maxZoom = 4.0;
         this.autoRotate = false;
 
-        // Interaction state
-        this.isDragging = false;
-        this.lastMouseX = 0;
-        this.lastMouseY = 0;
+        // View options
+        this.theme = "ir";      // 'ir' (monochrome) or 'rgb' (enhanced false-color)
+        this.showGradCAM = true; // Toggle Grad-CAM convective attention overlay
+        this.showStateBorders = true;
+        this.showLatLonGrid = true;
+        this.showQuadrants = true;
 
-        // Animation state
-        this.currentScenario = SCENARIOS.bob;
+        this.currentScenario = SCENARIOS.ditwah;
         this.vortexAngle = 0.0;
-        this.simTimeOffset = 0; // -18 to +24
 
         this.initCanvasSize();
         this.setupEventListeners();
@@ -769,71 +781,43 @@
         window.addEventListener("resize", () => this.initCanvasSize());
 
         // Mouse drag rotation
+        let isDragging = false, lastX = 0, lastY = 0;
         this.canvas.addEventListener("mousedown", (e) => {
-          this.isDragging = true;
-          this.lastMouseX = e.clientX;
-          this.lastMouseY = e.clientY;
+          isDragging = true;
+          lastX = e.clientX;
+          lastY = e.clientY;
         });
-
-        window.addEventListener("mouseup", () => { this.isDragging = false; });
-
+        window.addEventListener("mouseup", () => { isDragging = false; });
         window.addEventListener("mousemove", (e) => {
-          if (!this.isDragging) return;
-          const dx = e.clientX - this.lastMouseX;
-          const dy = e.clientY - this.lastMouseY;
-          this.lastMouseX = e.clientX;
-          this.lastMouseY = e.clientY;
+          if (!isDragging) return;
+          const dx = e.clientX - lastX;
+          const dy = e.clientY - lastY;
+          lastX = e.clientX;
+          lastY = e.clientY;
 
-          // Sensitivity tuned for smooth 3D globe feel
           this.rotLon -= dx * (0.35 / this.zoom);
           this.rotLat += dy * (0.35 / this.zoom);
           this.rotLat = Math.max(-75, Math.min(75, this.rotLat));
         });
 
-        // Mouse wheel zoom
+        // Wheel zoom
         this.canvas.addEventListener("wheel", (e) => {
           e.preventDefault();
-          const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-          this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * zoomFactor));
+          const factor = e.deltaY < 0 ? 1.12 : 0.89;
+          this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
         }, { passive: false });
-
-        // Touch support
-        let lastTouchX = 0, lastTouchY = 0;
-        this.canvas.addEventListener("touchstart", (e) => {
-          if (e.touches.length === 1) {
-            this.isDragging = true;
-            lastTouchX = e.touches[0].clientX;
-            lastTouchY = e.touches[0].clientY;
-          }
-        });
-        window.addEventListener("touchend", () => { this.isDragging = false; });
-        window.addEventListener("touchmove", (e) => {
-          if (!this.isDragging || e.touches.length !== 1) return;
-          const dx = e.touches[0].clientX - lastTouchX;
-          const dy = e.touches[0].clientY - lastTouchY;
-          lastTouchX = e.touches[0].clientX;
-          lastTouchY = e.touches[0].clientY;
-          this.rotLon -= dx * (0.4 / this.zoom);
-          this.rotLat += dy * (0.4 / this.zoom);
-          this.rotLat = Math.max(-75, Math.min(75, this.rotLat));
-        });
       }
 
       setScenario(sc) {
         this.currentScenario = sc;
-        this.flyTo(sc.camTarget.lat, sc.camTarget.lon);
+        this.targetLat = sc.camTarget.lat;
+        this.targetLon = sc.camTarget.lon;
       }
 
-      flyTo(targetLat, targetLon) {
-        this.targetLat = targetLat;
-        this.targetLon = targetLon;
-      }
-
-      // 3D Sphere Orthographic Projection
-      project(latDeg, lonDeg, altRadiusMultiplier = 1.0) {
+      project(latDeg, lonDeg) {
         const cx = this.width / 2;
         const cy = this.height / 2;
-        const R = Math.min(this.width, this.height) * 0.42 * this.zoom * altRadiusMultiplier;
+        const R = Math.min(this.width, this.height) * 0.44 * this.zoom;
 
         const phi = (latDeg * Math.PI) / 180;
         const lambda = (lonDeg * Math.PI) / 180;
@@ -842,7 +826,6 @@
 
         const dLambda = lambda - lambda0;
 
-        // 3D Directional Cosines
         const x = Math.cos(phi) * Math.sin(dLambda);
         const y = Math.cos(phi0) * Math.sin(phi) - Math.sin(phi0) * Math.cos(phi) * Math.cos(dLambda);
         const z = Math.sin(phi0) * Math.sin(phi) + Math.cos(phi0) * Math.cos(phi) * Math.cos(dLambda);
@@ -851,7 +834,7 @@
           x: cx + R * x,
           y: cy - R * y,
           z: z,
-          visible: z > 0.02,
+          visible: z > 0.05,
           radius: R
         };
       }
@@ -860,7 +843,7 @@
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.width, this.height);
 
-        // Smooth camera dampening to target
+        // Smooth camera transition
         if (this.targetLat !== undefined && this.targetLon !== undefined) {
           this.rotLat += (this.targetLat - this.rotLat) * 0.08;
           let diffLon = (this.targetLon - this.rotLon) % 360;
@@ -873,89 +856,88 @@
           }
         }
 
-        if (this.autoRotate && !this.isDragging) {
-          this.rotLon += 0.25;
-        }
-
-        this.vortexAngle += 0.04;
+        if (this.autoRotate) this.rotLon += 0.2;
+        this.vortexAngle += 0.035;
 
         const cx = this.width / 2;
         const cy = this.height / 2;
-        const R = Math.min(this.width, this.height) * 0.42 * this.zoom;
+        const R = Math.min(this.width, this.height) * 0.44 * this.zoom;
 
-        // 1. Draw Starfield & Cosmic Haze Background
-        this.drawStars(ctx);
+        // 1. Base Ocean Globe (Dark Space Black / Deep Navy depending on theme)
+        this.drawOceanBase(ctx, cx, cy, R);
 
-        // 2. Draw 3D Ocean Sphere with Shading
-        this.drawOceanGlobe(ctx, cx, cy, R);
+        // 2. Real-World Dashed Lat/Lon Graticule Grid (Matching Reference Images)
+        if (this.showLatLonGrid) {
+          this.drawLatLonGrid(ctx);
+        }
 
-        // 3. Draw Latitude/Longitude Graticule Lines
-        this.drawGraticule(ctx);
+        // 3. IMD Marine Operational Warning Quadrants (WCB, ECB, SWB, SEB)
+        if (this.showQuadrants) {
+          this.drawIMDQuadrants(ctx);
+        }
 
-        // 4. Draw Continental Coastlines (3D Projected)
-        this.drawCoastlines(ctx);
+        // 4. Real-World Coastlines & Geopolitical State Boundaries
+        this.drawCoastlinesAndStates(ctx);
 
-        // 5. Draw Cyclone Simulation (Past Track, Current Eye, Danger Radii, & Red Dotted Future Path)
-        this.drawCycloneSimulation(ctx);
+        // 5. Authentic Satellite Cloud Spiral & Vortex (Monochrome IR or Enhanced RGB)
+        this.drawSatelliteCloudSpiral(ctx);
 
-        // 6. Draw Atmosphere Rim Glow
-        this.drawAtmosphere(ctx, cx, cy, R);
+        // 6. Explainable Grad-CAM Heatmap (Convective Core Focus)
+        if (this.showGradCAM) {
+          this.drawGradCAMOverlay(ctx);
+        }
+
+        // 7. Trajectories: Observed Past (Cyan) + PREDICTED MOVEMENT (RED DOTTED LINE)
+        this.drawTrajectories(ctx);
+
+        // 8. Target Callout Boxes & Pointing Arrows (Matching Reference Images 1 & 3)
+        this.drawTargetCallout(ctx);
 
         requestAnimationFrame(this.renderLoop);
       }
 
-      drawStars(ctx) {
+      drawOceanBase(ctx, cx, cy, R) {
         ctx.save();
-        ctx.fillStyle = "#020617";
+        ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // Seeded decorative ambient stars
-        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-        for (let i = 0; i < 40; i++) {
-          const sx = (i * 137.5) % this.width;
-          const sy = (i * 93.3) % this.height;
-          const sz = (i % 3 === 0) ? 1.5 : 1.0;
-          ctx.beginPath();
-          ctx.arc(sx, sy, sz, 0, Math.PI * 2);
-          ctx.fill();
+        // Ocean globe sphere
+        const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.05, cx, cy, R);
+        if (this.theme === "rgb") {
+          // Reference Image 2: Deep saturated blue ocean
+          grad.addColorStop(0, "#082f49");
+          grad.addColorStop(0.6, "#031c36");
+          grad.addColorStop(1, "#020617");
+        } else {
+          // Reference Image 1 & 3: Dark space/ocean background
+          grad.addColorStop(0, "#0f172a");
+          grad.addColorStop(0.7, "#050811");
+          grad.addColorStop(1, "#000000");
         }
-        ctx.restore();
-      }
-
-      drawOceanGlobe(ctx, cx, cy, R) {
-        ctx.save();
-        // 3D Sphere radial gradient (deep ocean blue with specular sun reflection)
-        const grad = ctx.createRadialGradient(
-          cx - R * 0.35, cy - R * 0.35, R * 0.05,
-          cx, cy, R
-        );
-        grad.addColorStop(0, "#1e3a8a");
-        grad.addColorStop(0.5, "#0f172a");
-        grad.addColorStop(0.85, "#090d16");
-        grad.addColorStop(1, "#020617");
 
         ctx.beginPath();
         ctx.arc(cx, cy, R, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Subtle dark rim border
-        ctx.strokeStyle = "rgba(59, 130, 246, 0.25)";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = this.theme === "rgb" ? "rgba(56, 189, 248, 0.4)" : "rgba(148, 163, 184, 0.25)";
+        ctx.lineWidth = 1.2;
         ctx.stroke();
         ctx.restore();
       }
 
-      drawGraticule(ctx) {
+      drawLatLonGrid(ctx) {
         ctx.save();
-        ctx.strokeStyle = "rgba(100, 116, 139, 0.18)";
-        ctx.lineWidth = 0.8;
+        // Dashed lines exactly like reference satellite images
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
+        ctx.lineWidth = 0.9;
+        ctx.setLineDash([4, 4]);
 
-        // Latitude parallels every 20°
-        for (let lat = -60; lat <= 60; lat += 20) {
+        // Latitude parallels every 5 degrees (5°N to 35°N)
+        for (let lat = 0; lat <= 35; lat += 5) {
           ctx.beginPath();
           let started = false;
-          for (let lon = -180; lon <= 180; lon += 5) {
+          for (let lon = 55; lon <= 105; lon += 1) {
             const p = this.project(lat, lon);
             if (p.visible) {
               if (!started) { ctx.moveTo(p.x, p.y); started = true; }
@@ -965,13 +947,21 @@
             }
           }
           ctx.stroke();
+
+          // Latitude degree labels along 60°E meridian
+          const lblP = this.project(lat, 60.0);
+          if (lblP.visible) {
+            ctx.fillStyle = "rgba(203, 213, 225, 0.75)";
+            ctx.font = "9px monospace";
+            ctx.fillText(`${lat}°N`, lblP.x - 24, lblP.y + 3);
+          }
         }
 
-        // Longitude meridians every 30°
-        for (let lon = -180; lon < 180; lon += 30) {
+        // Longitude meridians every 5 degrees (60°E to 105°E)
+        for (let lon = 60; lon <= 105; lon += 5) {
           ctx.beginPath();
           let started = false;
-          for (let lat = -80; lat <= 80; lat += 5) {
+          for (let lat = 0; lat <= 35; lat += 1) {
             const p = this.project(lat, lon);
             if (p.visible) {
               if (!started) { ctx.moveTo(p.x, p.y); started = true; }
@@ -981,105 +971,273 @@
             }
           }
           ctx.stroke();
-        }
 
-        // Equator Highlight
-        ctx.strokeStyle = "rgba(59, 130, 246, 0.4)";
-        ctx.lineWidth = 1.2;
+          // Longitude degree labels along equator / 2°N
+          const lblP = this.project(1.5, lon);
+          if (lblP.visible) {
+            ctx.fillStyle = "rgba(203, 213, 225, 0.75)";
+            ctx.font = "9px monospace";
+            ctx.fillText(`${lon}°E`, lblP.x - 12, lblP.y + 12);
+          }
+        }
+        ctx.restore();
+      }
+
+      drawIMDQuadrants(ctx) {
+        ctx.save();
+        // Matching Reference Image 2: Pink/Magenta IMD Warning Quadrant Boxes
+        ctx.strokeStyle = "#e879f9"; // Vibrant Pink
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([5, 4]);
+
+        for (const q of IMD_QUADRANTS) {
+          ctx.beginPath();
+          let started = false;
+
+          // Box perimeter points
+          const perimeter = [
+            [q.latMin, q.lonMin], [q.latMax, q.lonMin],
+            [q.latMax, q.lonMax], [q.latMin, q.lonMax],
+            [q.latMin, q.lonMin]
+          ];
+
+          for (const [lat, lon] of perimeter) {
+            const p = this.project(lat, lon);
+            if (p.visible) {
+              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+              else { ctx.lineTo(p.x, p.y); }
+            }
+          }
+          ctx.stroke();
+
+          // Quadrant Code Label (e.g. WCB, ECB, SWB, SEB)
+          const centerP = this.project((q.latMin + q.latMax) / 2, (q.lonMin + q.lonMax) / 2);
+          if (centerP.visible) {
+            ctx.fillStyle = "#f0abfc";
+            ctx.font = "bold 11px monospace";
+            ctx.fillText(q.name, centerP.x - 14, centerP.y);
+          }
+        }
+        ctx.restore();
+      }
+
+      drawCoastlinesAndStates(ctx) {
+        ctx.save();
+        // High-contrast color: Yellow-gold for Enhanced RGB, Bright White for Mono IR
+        const borderColor = this.theme === "rgb" ? "#facc15" : "#ffffff";
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+
+        // A. Coastline of India
         ctx.beginPath();
-        let eqStarted = false;
-        for (let lon = -180; lon <= 180; lon += 4) {
-          const p = this.project(0, lon);
+        let started = false;
+        for (const [lat, lon] of INDIA_COASTLINE) {
+          const p = this.project(lat, lon);
           if (p.visible) {
-            if (!eqStarted) { ctx.moveTo(p.x, p.y); eqStarted = true; }
+            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
             else { ctx.lineTo(p.x, p.y); }
           } else {
-            eqStarted = false;
+            started = false;
           }
         }
+        ctx.stroke();
+
+        // B. Sri Lanka Island
+        ctx.beginPath();
+        started = false;
+        for (const [lat, lon] of SRI_LANKA) {
+          const p = this.project(lat, lon);
+          if (p.visible) {
+            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+            else { ctx.lineTo(p.x, p.y); }
+          }
+        }
+        ctx.stroke();
+
+        // C. Bangladesh & Myanmar Coast
+        ctx.beginPath();
+        started = false;
+        for (const [lat, lon] of BANGLADESH_MYANMAR) {
+          const p = this.project(lat, lon);
+          if (p.visible) {
+            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+            else { ctx.lineTo(p.x, p.y); }
+          }
+        }
+        ctx.stroke();
+
+        // D. Andaman & Nicobar Archipelago
+        for (const arc of ANDAMAN_NICOBAR) {
+          ctx.beginPath();
+          started = false;
+          for (const [lat, lon] of arc) {
+            const p = this.project(lat, lon);
+            if (p.visible) {
+              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+              else { ctx.lineTo(p.x, p.y); }
+            }
+          }
+          ctx.stroke();
+        }
+
+        // E. Internal Geopolitical State Boundaries (Matching Reference Image 1 & 2)
+        if (this.showStateBorders) {
+          ctx.strokeStyle = this.theme === "rgb" ? "rgba(250, 204, 21, 0.7)" : "rgba(255, 255, 255, 0.75)";
+          ctx.lineWidth = 1.0;
+          ctx.setLineDash([2, 2]);
+
+          for (const b of INDIA_STATE_BORDERS) {
+            ctx.beginPath();
+            started = false;
+            for (const [lat, lon] of b) {
+              const p = this.project(lat, lon);
+              if (p.visible) {
+                if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+                else { ctx.lineTo(p.x, p.y); }
+              }
+            }
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      drawSatelliteCloudSpiral(ctx) {
+        const sc = this.currentScenario;
+        const p = this.project(sc.obs.lat, sc.obs.lon);
+        if (!p.visible) return;
+
+        const rScale = (p.radius / 300);
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(this.vortexAngle);
+
+        const isRGB = this.theme === "rgb";
+        const numArms = 5;
+
+        // Multi-layered logarithmic spiral cloud bands matching authentic INSAT-3D storm morphology
+        for (let arm = 0; arm < numArms; arm++) {
+          const armOffset = (arm * Math.PI * 2) / numArms;
+          ctx.beginPath();
+
+          for (let t = 0.15; t < 1.6; t += 0.05) {
+            const r = 50 * t * rScale;
+            const theta = armOffset + t * 4.2;
+            const sx = r * Math.cos(theta);
+            const sy = r * Math.sin(theta);
+            if (t === 0.15) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+
+          // Gradient color: Monochromatic IR (White/Grey) vs Enhanced RGB (Fiery Orange/Red)
+          const grad = ctx.createLinearGradient(0, 0, 60 * rScale, 60 * rScale);
+          if (isRGB) {
+            // Reference Image 2: Fiery red/orange convective tops -> yellow/cyan outer bands
+            grad.addColorStop(0, "rgba(239, 68, 68, 0.95)");
+            grad.addColorStop(0.3, "rgba(249, 115, 22, 0.85)");
+            grad.addColorStop(0.7, "rgba(234, 179, 8, 0.55)");
+            grad.addColorStop(1, "rgba(6, 182, 212, 0.0)");
+          } else {
+            // Reference Image 1 & 3: Brilliant white convective core -> soft grey outer bands
+            grad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+            grad.addColorStop(0.4, "rgba(226, 232, 240, 0.85)");
+            grad.addColorStop(0.75, "rgba(148, 163, 184, 0.45)");
+            grad.addColorStop(1, "rgba(71, 85, 105, 0.0)");
+          }
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = (12 - arm * 1.5) * rScale;
+          ctx.stroke();
+        }
+
+        // Central Eye Core (Calm Center)
+        const eyeR = Math.max(5, (sc.obs.eye * 0.3) * rScale);
+        ctx.beginPath();
+        ctx.arc(0, 0, eyeR, 0, Math.PI * 2);
+        ctx.fillStyle = isRGB ? "#0a192f" : "#000000";
+        ctx.fill();
+        ctx.strokeStyle = isRGB ? "#facc15" : "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Second system if in dual-vortex mode (Reference Image 3: Senyar remnant)
+        if (sc.secondSystem) {
+          const sp = this.project(sc.secondSystem.lat, sc.secondSystem.lon);
+          if (sp.visible) {
+            ctx.save();
+            ctx.translate(sp.x, sp.y);
+            ctx.rotate(this.vortexAngle * 0.8);
+            for (let a = 0; a < 3; a++) {
+              ctx.beginPath();
+              for (let t = 0.2; t < 1.1; t += 0.05) {
+                const r = 32 * t * rScale;
+                const theta = (a * Math.PI * 2 / 3) + t * 3.5;
+                const sx = r * Math.cos(theta);
+                const sy = r * Math.sin(theta);
+                if (t === 0.2) ctx.moveTo(sx, sy);
+                else ctx.lineTo(sx, sy);
+              }
+              ctx.strokeStyle = "rgba(203, 213, 225, 0.65)";
+              ctx.lineWidth = 7 * rScale;
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
+      }
+
+      drawGradCAMOverlay(ctx) {
+        const sc = this.currentScenario;
+        const p = this.project(sc.obs.lat, sc.obs.lon);
+        if (!p.visible) return;
+
+        const rScale = (p.radius / 300);
+
+        ctx.save();
+        // Grad-CAM Attention Heatmap: Concentrates intense red heat directly onto the convective eyewall
+        const heatGrad = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, 75 * rScale);
+        heatGrad.addColorStop(0, "rgba(220, 38, 38, 0.85)");   // Deep Red (Maximum Attention >90%)
+        heatGrad.addColorStop(0.35, "rgba(249, 115, 22, 0.70)");// Orange
+        heatGrad.addColorStop(0.65, "rgba(234, 179, 8, 0.40)"); // Yellow
+        heatGrad.addColorStop(0.9, "rgba(6, 182, 212, 0.15)");  // Cyan boundary
+        heatGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");         // Zero attention outside
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 75 * rScale, 0, Math.PI * 2);
+        ctx.fillStyle = heatGrad;
+        ctx.fill();
+
+        // Pulsating attention core halo
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 24 * rScale, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
+        ctx.lineWidth = 2.0;
         ctx.stroke();
         ctx.restore();
       }
 
-      drawCoastlines(ctx) {
-        ctx.save();
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.75)";
-        ctx.fillStyle = "rgba(30, 41, 59, 0.7)";
-        ctx.lineWidth = 1.2;
-
-        for (const poly of COASTLINES) {
-          ctx.beginPath();
-          let started = false;
-          let anyVisible = false;
-
-          for (let i = 0; i < poly.length; i++) {
-            const [lat, lon] = poly[i];
-            const p = this.project(lat, lon);
-            if (p.visible) {
-              anyVisible = true;
-              if (!started) {
-                ctx.moveTo(p.x, p.y);
-                started = true;
-              } else {
-                ctx.lineTo(p.x, p.y);
-              }
-            } else {
-              started = false;
-            }
-          }
-
-          if (anyVisible) {
-            ctx.stroke();
-            // Fill landmass subtly
-            ctx.fill();
-          }
-        }
-        ctx.restore();
-      }
-
-      drawCycloneSimulation(ctx) {
+      drawTrajectories(ctx) {
         const sc = this.currentScenario;
-        const curLat = sc.obs.lat;
-        const curLon = sc.obs.lon;
-        const curPt = this.project(curLat, curLon);
+        const curP = this.project(sc.obs.lat, sc.obs.lon);
 
-        // =====================================================================
-        // A. PAST TRACK (Observed Historical Movement: Solid Cyan Line)
-        // =====================================================================
+        // A. Past Track (Solid Cyan Line)
         const past = sc.pred.pastTrack;
         ctx.save();
-        ctx.strokeStyle = "#38bdf8"; // Cyan
+        ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         let pastStarted = false;
-
-        for (let i = 0; i < past.length; i++) {
-          const pt = this.project(past[i].lat, past[i].lon);
-          if (pt.visible) {
-            if (!pastStarted) { ctx.moveTo(pt.x, pt.y); pastStarted = true; }
-            else { ctx.lineTo(pt.x, pt.y); }
+        for (const pt of past) {
+          const p = this.project(pt.lat, pt.lon);
+          if (p.visible) {
+            if (!pastStarted) { ctx.moveTo(p.x, p.y); pastStarted = true; }
+            else { ctx.lineTo(p.x, p.y); }
           }
         }
         ctx.stroke();
-
-        // Past Observation Markers
-        for (let i = 0; i < past.length; i++) {
-          const pt = this.project(past[i].lat, past[i].lon);
-          if (pt.visible) {
-            ctx.fillStyle = "#0284c7";
-            ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = "#bae6fd";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-
-            // Label timestamp
-            ctx.fillStyle = "#94a3b8";
-            ctx.font = "9px monospace";
-            ctx.fillText(past[i].time, pt.x + 5, pt.y - 4);
-          }
-        }
         ctx.restore();
 
         // =====================================================================
@@ -1088,93 +1246,59 @@
         const waypoints = sc.pred.waypoints;
         ctx.save();
 
-        // Glowing red drop-shadow for high-priority prediction path
-        ctx.shadowColor = "rgba(239, 68, 68, 0.85)";
-        ctx.shadowBlur = 10;
+        // Glowing red drop shadow
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 12;
         ctx.strokeStyle = "#ef4444"; // Vivid Red
-        ctx.lineWidth = 3.0;
-        ctx.setLineDash([6, 6]); // RED DOTTED LINE
+        ctx.lineWidth = 3.2;
+        ctx.setLineDash([7, 7]); // RED DOTTED LINE
 
         ctx.beginPath();
-        if (curPt.visible) {
-          ctx.moveTo(curPt.x, curPt.y);
-        }
+        if (curP.visible) ctx.moveTo(curP.x, curP.y);
 
-        let predStarted = curPt.visible;
-        for (let i = 0; i < waypoints.length; i++) {
-          const pt = this.project(waypoints[i].lat, waypoints[i].lon);
-          if (pt.visible) {
-            if (!predStarted) { ctx.moveTo(pt.x, pt.y); predStarted = true; }
-            else { ctx.lineTo(pt.x, pt.y); }
+        let predStarted = curP.visible;
+        for (const wp of waypoints) {
+          const p = this.project(wp.lat, wp.lon);
+          if (p.visible) {
+            if (!predStarted) { ctx.moveTo(p.x, p.y); predStarted = true; }
+            else { ctx.lineTo(p.x, p.y); }
           }
         }
         ctx.stroke();
         ctx.restore();
 
-        // B.1 Uncertainty Forecast Cone (Shaded red area expanding forward)
+        // B.1 Predicted Waypoint Nodes
         ctx.save();
-        ctx.fillStyle = "rgba(239, 68, 68, 0.12)";
-        ctx.beginPath();
-        if (curPt.visible) {
-          ctx.moveTo(curPt.x, curPt.y);
-          // Left envelope
-          for (let i = 0; i < waypoints.length; i++) {
-            const spread = (i + 1) * 0.45;
-            const pt = this.project(waypoints[i].lat + spread * 0.4, waypoints[i].lon - spread * 0.6);
-            if (pt.visible) ctx.lineTo(pt.x, pt.y);
-          }
-          // Right envelope
-          for (let i = waypoints.length - 1; i >= 0; i--) {
-            const spread = (i + 1) * 0.45;
-            const pt = this.project(waypoints[i].lat - spread * 0.4, waypoints[i].lon + spread * 0.6);
-            if (pt.visible) ctx.lineTo(pt.x, pt.y);
-          }
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-
-        // B.2 Predicted Waypoint Nodes with Pulsing Glow
-        ctx.save();
-        for (let i = 0; i < waypoints.length; i++) {
-          const wp = waypoints[i];
-          const pt = this.project(wp.lat, wp.lon);
-          if (pt.visible) {
-            // Red Forecast Waypoint Dot
+        for (const wp of waypoints) {
+          const p = this.project(wp.lat, wp.lon);
+          if (p.visible) {
             ctx.fillStyle = "#ef4444";
-            ctx.shadowColor = "#f87171";
-            ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
             ctx.fill();
-
-            // Inner white core
             ctx.fillStyle = "#ffffff";
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 1.8, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
             ctx.fill();
 
-            // Forecast Label Badge
-            ctx.shadowBlur = 0;
+            // Label
             ctx.fillStyle = "#fca5a5";
             ctx.font = "bold 9px monospace";
-            ctx.fillText(`${wp.time} (${wp.wind}kt)`, pt.x + 7, pt.y + 3);
+            ctx.fillText(`${wp.time}`, p.x + 7, p.y + 3);
           }
         }
         ctx.restore();
 
-        // =====================================================================
-        // C. CURRENT CYCLONE 3D VORTEX, DANGER RADII & EYE RENDERING
-        // =====================================================================
-        if (curPt.visible) {
-          const rScale = (curPt.radius / 300);
+        // C. Danger Radii at Current Center
+        if (curP.visible) {
+          const rScale = (curP.radius / 300);
 
-          // C.1 Danger Radius R30 (Gale Force >= 34 kt)
-          const r30Px = (sc.pred.r30 * 0.38) * rScale;
+          // R30 Gale Warning Disk (Yellow)
+          const r30Px = (sc.pred.r30 * 0.35) * rScale;
           ctx.save();
           ctx.beginPath();
-          ctx.arc(curPt.x, curPt.y, r30Px, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(250, 204, 21, 0.7)";
+          ctx.arc(curP.x, curP.y, r30Px, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(250, 204, 21, 0.75)";
           ctx.lineWidth = 1.5;
           ctx.setLineDash([4, 4]);
           ctx.stroke();
@@ -1182,125 +1306,108 @@
           ctx.fill();
           ctx.restore();
 
-          // C.2 Danger Radius R50 (Storm Force >= 50 kt)
-          const r50Px = (sc.pred.r50 * 0.38) * rScale;
+          // R50 Destructive Eyewall Disk (Red)
+          const r50Px = (sc.pred.r50 * 0.35) * rScale;
           ctx.save();
           ctx.beginPath();
-          ctx.arc(curPt.x, curPt.y, r50Px, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(239, 68, 68, 0.85)";
+          ctx.arc(curP.x, curP.y, r50Px, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
           ctx.lineWidth = 1.8;
           ctx.stroke();
-          ctx.fillStyle = "rgba(239, 68, 68, 0.15)";
+          ctx.fillStyle = "rgba(239, 68, 68, 0.16)";
           ctx.fill();
-          ctx.restore();
-
-          // C.3 Rotating Multi-Armed Spiral Rainbands (Thermal False Color)
-          ctx.save();
-          ctx.translate(curPt.x, curPt.y);
-          ctx.rotate(this.vortexAngle);
-
-          const numArms = 4;
-          for (let arm = 0; arm < numArms; arm++) {
-            const armAngle = (arm * Math.PI * 2) / numArms;
-            ctx.beginPath();
-            for (let t = 0.1; t < 1.4; t += 0.05) {
-              const spiralR = 45 * t * rScale;
-              const theta = armAngle + t * 3.8;
-              const sx = spiralR * Math.cos(theta);
-              const sy = spiralR * Math.sin(theta);
-              if (t === 0.1) ctx.moveTo(sx, sy);
-              else ctx.lineTo(sx, sy);
-            }
-            // Thermal false-color gradient: White convective core -> Red eyewall -> Yellow outer bands
-            const gradArm = ctx.createLinearGradient(0, 0, 40 * rScale, 40 * rScale);
-            gradArm.addColorStop(0, "rgba(255, 255, 255, 0.9)");
-            gradArm.addColorStop(0.3, "rgba(239, 68, 68, 0.8)");
-            gradArm.addColorStop(0.7, "rgba(245, 158, 11, 0.5)");
-            gradArm.addColorStop(1, "rgba(56, 189, 248, 0.0)");
-
-            ctx.strokeStyle = gradArm;
-            ctx.lineWidth = (8 - arm) * rScale;
-            ctx.stroke();
-          }
-
-          // C.4 Calm Central Eye
-          const eyePx = Math.max(4, (sc.obs.eye * 0.35) * rScale);
-          ctx.beginPath();
-          ctx.arc(0, 0, eyePx, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(10, 15, 30, 0.95)";
-          ctx.fill();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 2.0;
-          ctx.stroke();
-
-          ctx.restore();
-
-          // C.5 Current Location Radar Pulse Beacon
-          ctx.save();
-          const pulse = (Date.now() % 1600) / 1600;
-          ctx.beginPath();
-          ctx.arc(curPt.x, curPt.y, 8 + pulse * 24, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(239, 68, 68, ${1 - pulse})`;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-
-          // Core beacon dot
-          ctx.beginPath();
-          ctx.arc(curPt.x, curPt.y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = "#ef4444";
-          ctx.fill();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-
-          // Coordinates Callout Tag
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 10px monospace";
-          ctx.fillText(`● LIVE (${curLat.toFixed(1)}°N, ${curLon.toFixed(1)}°E)`, curPt.x + 12, curPt.y - 12);
           ctx.restore();
         }
       }
 
-      drawAtmosphere(ctx, cx, cy, R) {
+      drawTargetCallout(ctx) {
+        const sc = this.currentScenario;
+        const p = this.project(sc.obs.lat, sc.obs.lon);
+        if (!p.visible) return;
+
         ctx.save();
-        // Atmospheric limb glow
-        const glow = ctx.createRadialGradient(cx, cy, R * 0.94, cx, cy, R * 1.08);
-        glow.addColorStop(0, "rgba(56, 189, 248, 0.0)");
-        glow.addColorStop(0.6, "rgba(56, 189, 248, 0.25)");
-        glow.addColorStop(1, "rgba(56, 189, 248, 0.0)");
+
+        // 1. Red Target Circle around the Eye (Exact match to Reference Images 1 & 3)
+        const eyeCircleR = 18;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, eyeCircleR, 0, Math.PI * 2);
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 3.0;
+        ctx.stroke();
+
+        // Pulsing radar ripple
+        const pulse = (Date.now() % 2000) / 2000;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, eyeCircleR + pulse * 25, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(239, 68, 68, ${1 - pulse})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // 2. Red Pointer Arrow from callout to eye (Matching Reference Image 1)
+        const calloutX = p.x + 36;
+        const calloutY = p.y + 12;
 
         ctx.beginPath();
-        ctx.arc(cx, cy, R * 1.08, 0, Math.PI * 2);
-        ctx.fillStyle = glow;
+        ctx.moveTo(calloutX, calloutY);
+        ctx.lineTo(p.x + eyeCircleR + 2, p.y + 4);
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Arrow head
+        const arrowAngle = Math.atan2(p.y + 4 - calloutY, p.x + eyeCircleR + 2 - calloutX);
+        ctx.beginPath();
+        ctx.moveTo(p.x + eyeCircleR + 2, p.y + 4);
+        ctx.lineTo(p.x + eyeCircleR + 2 - 8 * Math.cos(arrowAngle - Math.PI / 6), p.y + 4 - 8 * Math.sin(arrowAngle - Math.PI / 6));
+        ctx.lineTo(p.x + eyeCircleR + 2 - 8 * Math.cos(arrowAngle + Math.PI / 6), p.y + 4 - 8 * Math.sin(arrowAngle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fillStyle = "#ef4444";
         ctx.fill();
+
+        // 3. Red Callout Text Label (e.g. "Ditwah")
+        ctx.fillStyle = "#ef4444";
+        ctx.font = "bold 16px sans-serif";
+        ctx.shadowColor = "#000000";
+        ctx.shadowBlur = 6;
+        ctx.fillText(sc.name.split(" ").pop(), calloutX + 5, calloutY + 6);
+
+        // 4. Second target if in dual vortex mode (Reference Image 3 yellow circle)
+        if (sc.secondSystem) {
+          const sp = this.project(sc.secondSystem.lat, sc.secondSystem.lon);
+          if (sp.visible) {
+            ctx.beginPath();
+            ctx.arc(sp.x, sp.y, 16, 0, Math.PI * 2);
+            ctx.strokeStyle = "#facc15";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+          }
+        }
+
         ctx.restore();
       }
     }
 
     // =========================================================================
-    // 5. Dashboard UI Synchronization & Event Handling
+    // 4. Dashboard Synchronization & Event Binding
     // =========================================================================
-    let globe;
+    let sim;
 
-    function updateDashboardUI(sc) {
-      // HUD Header
-      document.getElementById("hudStormName").textContent = sc.name;
-      document.getElementById("hudBasin").textContent = sc.basin;
-      document.getElementById("hudCoords").textContent = `${sc.obs.lat.toFixed(1)}°N, ${sc.obs.lon.toFixed(1)}°E`;
-      document.getElementById("hudPressure").textContent = `${sc.obs.pressure} hPa`;
-      document.getElementById("hudWind").textContent = `${sc.obs.wind} kt (${Math.round(sc.obs.wind * 1.852)} km/h)`;
+    function updateRightSidebar(sc) {
+      // HUD Header Callouts
+      document.getElementById("targetStormName").textContent = sc.name;
+      document.getElementById("targetStormBadge").textContent = sc.catCode;
+      document.getElementById("targetCoords").textContent = `${sc.obs.lat.toFixed(1)}°N / ${sc.obs.lon.toFixed(1)}°E`;
+      document.getElementById("targetBasin").textContent = sc.basin;
 
-      const catBadge = document.getElementById("hudCatBadge");
-      catBadge.textContent = sc.catCode;
-      catBadge.className = `text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-        sc.catLevel >= 3 ? "bg-red-600/30 text-red-300 border border-red-500/40" :
-        sc.catLevel === 2 ? "bg-orange-600/30 text-orange-300 border border-orange-500/40" :
-        "bg-amber-600/30 text-amber-300 border border-amber-500/40"
-      }`;
+      // Handle second system card
+      const secondCard = document.getElementById("targetSecondCard");
+      if (sc.secondSystem) {
+        secondCard.classList.remove("hidden");
+      } else {
+        secondCard.classList.add("hidden");
+      }
 
-      // ========================================================
       // PART 1: LIVE SENSORY DATA (TOP HALF)
-      // ========================================================
       document.getElementById("liveWindVal").textContent = sc.obs.wind;
       document.getElementById("liveWindKmh").textContent = `(${Math.round(sc.obs.wind * 1.852)} km/h)`;
       document.getElementById("liveGustVal").textContent = `${sc.obs.gust} kt`;
@@ -1314,9 +1421,7 @@
       document.getElementById("liveSpeedVal").textContent = `${sc.obs.speed} km/h`;
       document.getElementById("liveFrameId").textContent = sc.obs.frame;
 
-      // ========================================================
       // PART 2: PREDICTED DATA (BOTTOM HALF)
-      // ========================================================
       document.getElementById("predConfidence").textContent = `${sc.confidence} Confidence`;
       document.getElementById("predCategory").textContent = sc.catName;
       document.getElementById("predCategoryCode").textContent = sc.catCode;
@@ -1348,104 +1453,131 @@
           <td class="py-1 text-right text-amber-400 font-bold">${wp.wind} kt</td>
           <td class="py-1 text-right text-emerald-400 font-mono">${wp.pressure} hPa</td>
         `;
-        // Click waypoint to fly camera
-        tr.addEventListener("click", () => {
-          globe.flyTo(wp.lat, wp.lon);
-        });
         tbody.appendChild(tr);
       });
     }
 
     // =========================================================================
-    // 6. Initialization & Controls Setup
+    // 5. Initializer & Controls Setup
     // =========================================================================
     window.addEventListener("DOMContentLoaded", () => {
-      globe = new Cyclone3DGlobe("globeCanvas");
-      updateDashboardUI(SCENARIOS.bob);
+      sim = new SatelliteGeospatialSimulation("globeCanvas");
+      updateRightSidebar(SCENARIOS.ditwah);
 
-      // Scenario dropdown change
+      // Scenario dropdown
       document.getElementById("scenarioSelect").addEventListener("change", (e) => {
         const val = e.target.value;
         if (val === "random") {
-          const rnd = generateRandomOccurrence();
-          globe.setScenario(rnd);
-          updateDashboardUI(rnd);
+          // Generate procedural storm
+          const lat = +(8 + Math.random() * 12).toFixed(1);
+          const lon = +(82 + Math.random() * 10).toFixed(1);
+          const w = Math.floor(45 + Math.random() * 70);
+          const rnd = {
+            name: `Cyclonic Storm SIM_${Math.floor(100 + Math.random() * 900)}`,
+            basin: "Bay of Bengal",
+            catName: w > 64 ? "Severe Cyclonic Storm" : "Cyclonic Storm",
+            catCode: w > 64 ? "SCS" : "CS",
+            confidence: "98.2%",
+            obs: {
+              lat: lat, lon: lon,
+              wind: w, gust: Math.floor(w * 1.25),
+              pressure: Math.floor(1010 - Math.pow(w / 6.7, 1 / 0.644)),
+              drop: "−4.2 hPa / 3h", sst: 30.1, rh: 86, shear: 7.8, speed: 15,
+              eye: 28, symmetry: 89, frame: "INSAT-3D TIR-1"
+            },
+            pred: {
+              wind: w + 8, deltaWind: "+8 kt in 6h", wind12h: w + 15,
+              pressure: Math.floor(1010 - Math.pow((w + 8) / 6.7, 1 / 0.644)),
+              deltaPres: "−7 hPa", trend: "INTENSIFYING",
+              r30: Math.floor(w * 2.8), r50: Math.floor(w * 1.1),
+              landfallProb: "94.0%", eta: "18.0 hrs", target: "Eastern Coast",
+              waypoints: [
+                { time: "+3h", lat: lat + 0.6, lon: lon - 0.5, wind: w + 4, pressure: 988 },
+                { time: "+6h", lat: lat + 1.2, lon: lon - 1.1, wind: w + 8, pressure: 984 },
+                { time: "+12h", lat: lat + 2.5, lon: lon - 2.2, wind: w + 15, pressure: 978 },
+                { time: "+24h", lat: lat + 4.8, lon: lon - 4.2, wind: w + 20, pressure: 970 }
+              ],
+              pastTrack: [
+                { time: "-12h", lat: lat - 1.4, lon: lon + 1.2, wind: w - 10 },
+                { time: "-6h", lat: lat - 0.7, lon: lon + 0.6, wind: w - 5 },
+                { time: "0h", lat: lat, lon: lon, wind: w }
+              ]
+            },
+            camTarget: { lat: lat, lon: lon }
+          };
+          sim.setScenario(rnd);
+          updateRightSidebar(rnd);
         } else if (SCENARIOS[val]) {
-          globe.setScenario(SCENARIOS[val]);
-          updateDashboardUI(SCENARIOS[val]);
+          sim.setScenario(SCENARIOS[val]);
+          updateRightSidebar(SCENARIOS[val]);
         }
       });
 
-      // Random Cyclone Occurrence Button
-      document.getElementById("btnRandomize").addEventListener("click", () => {
-        const rnd = generateRandomOccurrence();
-        globe.setScenario(rnd);
-        updateDashboardUI(rnd);
-        document.getElementById("scenarioSelect").value = "random";
+      // Theme Buttons
+      const btnIR = document.getElementById("btnThemeIR");
+      const btnRGB = document.getElementById("btnThemeRGB");
+
+      btnIR.addEventListener("click", () => {
+        sim.theme = "ir";
+        btnIR.className = "px-2.5 py-1 rounded font-semibold bg-slate-700 text-white transition";
+        btnRGB.className = "px-2.5 py-1 rounded font-medium text-slate-300 hover:text-white transition";
       });
 
-      // Camera Reset
+      btnRGB.addEventListener("click", () => {
+        sim.theme = "rgb";
+        btnRGB.className = "px-2.5 py-1 rounded font-semibold bg-blue-600 text-white transition";
+        btnIR.className = "px-2.5 py-1 rounded font-medium text-slate-300 hover:text-white transition";
+      });
+
+      // Grad-CAM Toggle Button
+      const btnGradCAM = document.getElementById("btnToggleGradCAM");
+      const badgeGradCAM = document.getElementById("gradcamStatusBadge");
+
+      btnGradCAM.addEventListener("click", () => {
+        sim.showGradCAM = !sim.showGradCAM;
+        if (sim.showGradCAM) {
+          btnGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-rose-500/50 text-rose-400 hover:bg-rose-950/40";
+          document.getElementById("gradcamLabel").textContent = "With Grad-CAM: ON";
+          document.getElementById("gradcamIcon").textContent = "🔥";
+          badgeGradCAM.classList.remove("hidden");
+        } else {
+          btnGradCAM.className = "px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700";
+          document.getElementById("gradcamLabel").textContent = "Without Grad-CAM";
+          document.getElementById("gradcamIcon").textContent = "🛰️";
+          badgeGradCAM.classList.add("hidden");
+        }
+      });
+
+      // Layer checkboxes
+      document.getElementById("chkStateBorders").addEventListener("change", (e) => {
+        sim.showStateBorders = e.target.checked;
+      });
+      document.getElementById("chkLatLonGrid").addEventListener("change", (e) => {
+        sim.showLatLonGrid = e.target.checked;
+      });
+      document.getElementById("chkQuadrants").addEventListener("change", (e) => {
+        sim.showQuadrants = e.target.checked;
+      });
+
+      // Reset camera
       document.getElementById("btnResetView").addEventListener("click", () => {
-        globe.zoom = 1.0;
-        globe.flyTo(globe.currentScenario.camTarget.lat, globe.currentScenario.camTarget.lon);
+        sim.zoom = 1.35;
+        sim.targetLat = sim.currentScenario.camTarget.lat;
+        sim.targetLon = sim.currentScenario.camTarget.lon;
       });
 
-      // Zoom Buttons
+      // Zoom buttons
       document.getElementById("btnZoomIn").addEventListener("click", () => {
-        globe.zoom = Math.min(globe.maxZoom, globe.zoom * 1.25);
+        sim.zoom = Math.min(sim.maxZoom, sim.zoom * 1.25);
       });
       document.getElementById("btnZoomOut").addEventListener("click", () => {
-        globe.zoom = Math.max(globe.minZoom, globe.zoom * 0.8);
+        sim.zoom = Math.max(sim.minZoom, sim.zoom * 0.8);
       });
 
-      // Auto-rotation toggle
+      // Spin button
       document.getElementById("btnAutoRotate").addEventListener("click", function() {
-        globe.autoRotate = !globe.autoRotate;
-        this.classList.toggle("bg-blue-600", globe.autoRotate);
-        this.classList.toggle("text-white", globe.autoRotate);
-      });
-
-      // Time Scrubber
-      let isPlaying = false;
-      let playInterval = null;
-      const playBtn = document.getElementById("btnPlay");
-      const timeSlider = document.getElementById("timeSlider");
-      const timeStepLabel = document.getElementById("timeStepLabel");
-
-      function updateTimeStep(step) {
-        timeSlider.value = step;
-        if (step === 0) {
-          timeStepLabel.textContent = "LIVE (T=0h)";
-          timeStepLabel.className = "text-cyan-400 font-bold";
-        } else if (step < 0) {
-          timeStepLabel.textContent = `PAST (${step}h)`;
-          timeStepLabel.className = "text-blue-400 font-bold";
-        } else {
-          timeStepLabel.textContent = `FORECAST (+${step}h)`;
-          timeStepLabel.className = "text-red-400 font-bold";
-        }
-      }
-
-      timeSlider.addEventListener("input", (e) => {
-        updateTimeStep(parseInt(e.target.value));
-      });
-
-      playBtn.addEventListener("click", () => {
-        isPlaying = !isPlaying;
-        playBtn.textContent = isPlaying ? "⏸" : "▶";
-        playBtn.classList.toggle("bg-amber-600", isPlaying);
-        playBtn.classList.toggle("bg-blue-600", !isPlaying);
-
-        if (isPlaying) {
-          playInterval = setInterval(() => {
-            let current = parseInt(timeSlider.value);
-            current += 3;
-            if (current > 24) current = -18;
-            updateTimeStep(current);
-          }, 800);
-        } else {
-          clearInterval(playInterval);
-        }
+        sim.autoRotate = !sim.autoRotate;
+        this.classList.toggle("bg-blue-600", sim.autoRotate);
       });
     });
   </script>
