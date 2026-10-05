@@ -263,18 +263,24 @@
         </div>
       </div>
 
-      <!-- Bottom Floating Controls: Playback & Timeline -->
-      <div class="absolute bottom-4 left-4 z-[1000] flex items-center gap-2 pointer-events-auto bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-2 rounded-xl shadow-2xl">
-        <button id="btnPlay" class="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center text-xs font-bold transition shadow-md shadow-blue-600/30">
+      <!-- Bottom Floating Controls: Playback & Timeline (15s = 1h Movement Engine) -->
+      <div class="absolute bottom-4 left-4 z-[1000] flex items-center gap-2.5 pointer-events-auto bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-2 rounded-xl shadow-2xl">
+        <button id="btnPlay" class="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center text-xs font-bold transition shadow-md shadow-blue-600/30 cursor-pointer">
           ▶
         </button>
         <div class="flex flex-col gap-0.5 px-2">
-          <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono gap-3">
             <span>-18h Past</span>
             <span id="timeStepLabel" class="text-cyan-400 font-bold">LIVE (T=0h)</span>
-            <span>+24h Forecast</span>
+            <span>+24h Landfall</span>
           </div>
-          <input type="range" id="timeSlider" min="-18" max="24" step="3" value="0" class="w-52 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+          <input type="range" id="timeSlider" min="-18" max="24" step="0.05" value="0" class="w-56 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+        </div>
+        <div class="pl-2 border-l border-slate-800 flex flex-col items-center">
+          <span class="text-[8px] uppercase tracking-wider text-slate-500 font-mono">Rate</span>
+          <span class="text-[9px] font-mono font-bold text-amber-400 px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30 whitespace-nowrap">
+            15s = 1h
+          </span>
         </div>
       </div>
 
@@ -1837,7 +1843,7 @@
 
       // Predicted Waypoint Nodes
       pred.waypoints.forEach((w) => {
-        const isCurrentStep = (currentTimeStep > 0 && parseInt(w.time) === currentTimeStep);
+        const isCurrentStep = (currentTimeStep > 0 && Math.abs(parseInt(w.time) - currentTimeStep) <= 0.65);
         const node = L.circleMarker([w.lat, w.lon], {
           radius: isCurrentStep ? 8 : 5.5,
           color: isCurrentStep ? "#F59E0B" : "#B91C1C",
@@ -1887,7 +1893,7 @@
 
       // D. EYE TARGET CALLOUT (Tracks scrubbed position)
       const currentPos = getPositionAtTime(currentTimeStep);
-      const isLiveStep = (currentTimeStep === 0);
+      const isLiveStep = (Math.abs(currentTimeStep) < 0.05);
       
       const targetIcon = L.divIcon({
         className: "custom-target-marker",
@@ -1899,7 +1905,7 @@
             </div>
             <div class="ml-2 pl-2 border-l-2 ${isLiveStep ? "border-red-500 text-red-500" : "border-cyan-400 text-cyan-400"} font-extrabold text-sm font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
               ${activeScenario.name.replace("Cyclonic Storm ", "").replace("Super Cyclone ", "").replace("Extremely Severe Cyclone ", "")}
-              <span class="text-xs block font-mono font-normal opacity-90">${currentPos.lat.toFixed(1)}°N, ${currentPos.lon.toFixed(1)}°E [${currentTimeStep >= 0 ? "+" + currentTimeStep : currentTimeStep}h]</span>
+              <span class="text-xs block font-mono font-normal opacity-90">${currentPos.lat.toFixed(2)}°N, ${currentPos.lon.toFixed(2)}°E [${formatTimeHourMin(currentTimeStep)}]</span>
             </div>
           </div>
         `,
@@ -2040,12 +2046,10 @@
         `;
       }
 
+      stopPlayback();
       currentTimeStep = 0;
       document.getElementById("timeSlider").value = 0;
       document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
-      if (isPlaying) {
-        document.getElementById("btnPlay").click();
-      }
     }
 
     function startSimulation() {
@@ -2081,6 +2085,7 @@
       }
 
       // Populate Live Sensory & Predicted Data
+      currentTimeStep = 0;
       updateSidebarData();
       renderTrajectoryAndMarkers();
       renderIMDQuadrants();
@@ -2092,6 +2097,9 @@
         duration: 1.2,
         easeLinearity: 0.25
       });
+
+      // Automatically launch continuous movement engine (15s = 1h)
+      startPlayback();
     }
 
     function updateSidebarData() {
@@ -2107,23 +2115,23 @@
       const dotIndicator = document.getElementById("liveDotIndicator");
       const statusChip = document.getElementById("telemetryStatusChip");
 
-      if (currentTimeStep === 0) {
+      if (Math.abs(currentTimeStep) < 0.05) {
         headerTitle.innerText = "Live Sensory Observation Data (Present: T=0h)";
         headerTitle.className = "text-xs font-bold uppercase tracking-wider text-emerald-400";
         dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot";
         statusChip.innerText = "LIVE TELEMETRY STREAM";
         statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
       } else if (currentTimeStep > 0) {
-        headerTitle.innerText = `Sensory State Evolvement (+${currentTimeStep}h Projected)`;
+        headerTitle.innerText = `Sensory State Evolvement (+${currentTimeStep.toFixed(1)}h / ${formatTimeHourMin(currentTimeStep)})`;
         headerTitle.className = "text-xs font-bold uppercase tracking-wider text-cyan-400";
         dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse";
-        statusChip.innerText = `+${currentTimeStep}h PROJECTED SENSORS`;
+        statusChip.innerText = `+${currentTimeStep.toFixed(1)}h PROJECTED SENSORS`;
         statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20";
       } else {
-        headerTitle.innerText = `Observed Past Sensory Telemetry (${currentTimeStep}h Archive)`;
+        headerTitle.innerText = `Observed Past Sensory Telemetry (${currentTimeStep.toFixed(1)}h Archive)`;
         headerTitle.className = "text-xs font-bold uppercase tracking-wider text-slate-300";
         dotIndicator.className = "w-2.5 h-2.5 rounded-full bg-slate-400";
-        statusChip.innerText = `PAST ${currentTimeStep}h ARCHIVE`;
+        statusChip.innerText = `PAST ${currentTimeStep.toFixed(1)}h ARCHIVE`;
         statusChip.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
       }
 
@@ -2131,8 +2139,8 @@
       document.getElementById("targetStormName").innerText = activeScenario.name;
       document.getElementById("targetStormBadge").innerText = activeScenario.catCode;
       const currentPos = getPositionAtTime(currentTimeStep);
-      document.getElementById("targetCoords").innerText = `${currentPos.lat.toFixed(1)}°N / ${currentPos.lon.toFixed(1)}°E`;
-      document.getElementById("targetBasin").innerText = activeScenario.basin;
+      document.getElementById("targetCoords").innerText = `${currentPos.lat.toFixed(2)}°N / ${currentPos.lon.toFixed(2)}°E`;
+      document.getElementById("targetBasin").innerText = `${activeScenario.basin} [${formatTimeHourMin(currentTimeStep)}]`;
 
       // Second target card visibility for dual vortex
       const secCard = document.getElementById("targetSecondCard");
@@ -2175,7 +2183,8 @@
 
       // Update quick push buttons styling
       document.querySelectorAll(".time-quick-btn").forEach(btn => {
-        if (parseInt(btn.dataset.time) === currentTimeStep) {
+        const btnTime = parseFloat(btn.dataset.time);
+        if (Math.abs(btnTime - currentTimeStep) < 0.75) {
           btn.className = "time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono font-bold transition bg-blue-600 text-white shadow";
         } else {
           btn.className = "time-quick-btn px-2 py-0.5 rounded text-[10px] font-mono transition text-slate-300 bg-slate-800 hover:text-white";
@@ -2324,24 +2333,88 @@
       }
     }
 
+    // =========================================================================
+    // 15 SECONDS = 1 HOUR TIME ENGINE
+    // =========================================================================
+    const REAL_SECONDS_PER_SIM_HOUR = 15.0; // 15 seconds real time = 1 hour simulation time
+    const TICK_INTERVAL_MS = 250;           // Update 4 times a second (250ms)
+    const HOURS_PER_TICK = (TICK_INTERVAL_MS / 1000) / REAL_SECONDS_PER_SIM_HOUR; // 0.25 / 15 = 1/60 hours (exactly 1 minute per tick)
+
+    function formatTimeHourMin(t) {
+      if (Math.abs(t) < 0.02) return "LIVE (T=0h)";
+      const sign = t > 0 ? "+" : "−";
+      const absT = Math.abs(t);
+      const hrs = Math.floor(absT);
+      const mins = Math.round((absT - hrs) * 60);
+      if (mins === 0) return `${sign}${hrs}h`;
+      if (hrs === 0) return `${sign}${mins}m`;
+      return `${sign}${hrs}h ${mins}m`;
+    }
+
+    function applyTimeStep(t) {
+      const timeSlider = document.getElementById("timeSlider");
+      const timeStepLabel = document.getElementById("timeStepLabel");
+
+      timeSlider.value = t;
+
+      if (Math.abs(t) < 0.02) {
+        timeStepLabel.innerText = "LIVE (T=0h)";
+      } else if (t > 0) {
+        timeStepLabel.innerText = `+${t.toFixed(1)}h (${formatTimeHourMin(t)})`;
+      } else {
+        timeStepLabel.innerText = `${t.toFixed(1)}h (${formatTimeHourMin(t)})`;
+      }
+
+      if (isSimulationStarted) {
+        updateSidebarData();
+        renderTrajectoryAndMarkers();
+      }
+    }
+
+    function startPlayback() {
+      if (playInterval) clearInterval(playInterval);
+      isPlaying = true;
+      const btnPlay = document.getElementById("btnPlay");
+      btnPlay.innerText = "⏸";
+      btnPlay.className = "w-8 h-8 rounded-lg bg-amber-600 hover:bg-amber-500 text-white flex items-center justify-center text-xs font-bold transition shadow-md shadow-amber-600/30 cursor-pointer";
+
+      playInterval = setInterval(() => {
+        if (!isSimulationStarted) {
+          stopPlayback();
+          return;
+        }
+
+        let nextTime = currentTimeStep + HOURS_PER_TICK;
+        if (nextTime >= 24.0) {
+          // Reached landfall at +24h!
+          currentTimeStep = 24.0;
+          applyTimeStep(24.0);
+          stopPlayback();
+          return;
+        }
+
+        currentTimeStep = nextTime;
+        applyTimeStep(nextTime);
+      }, TICK_INTERVAL_MS);
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+      const btnPlay = document.getElementById("btnPlay");
+      btnPlay.innerText = "▶";
+      btnPlay.className = "w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center text-xs font-bold transition shadow-md shadow-blue-600/30 cursor-pointer";
+    }
+
     // Future Push Quick Buttons Event Handlers
     document.querySelectorAll(".time-quick-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const targetTime = parseInt(btn.dataset.time);
+        const targetTime = parseFloat(btn.dataset.time);
         currentTimeStep = targetTime;
-        document.getElementById("timeSlider").value = targetTime;
-        if (targetTime === 0) {
-          document.getElementById("timeStepLabel").innerText = "LIVE (T=0h)";
-        } else if (targetTime > 0) {
-          document.getElementById("timeStepLabel").innerText = `FORECAST (+${targetTime}h)`;
-        } else {
-          document.getElementById("timeStepLabel").innerText = `PAST (${targetTime}h)`;
-        }
-
-        if (isSimulationStarted) {
-          updateSidebarData();
-          renderTrajectoryAndMarkers();
-        }
+        applyTimeStep(targetTime);
       });
     });
 
@@ -2401,41 +2474,25 @@
     const timeStepLabel = document.getElementById("timeStepLabel");
 
     timeSlider.addEventListener("input", (e) => {
-      currentTimeStep = parseInt(e.target.value);
-      if (currentTimeStep === 0) {
-        timeStepLabel.innerText = "LIVE (T=0h)";
-      } else if (currentTimeStep < 0) {
-        timeStepLabel.innerText = `PAST (${currentTimeStep}h)`;
-      } else {
-        timeStepLabel.innerText = `FORECAST (+${currentTimeStep}h)`;
-      }
-      if (isSimulationStarted) {
-        updateSidebarData();
-        renderTrajectoryAndMarkers();
-      }
+      currentTimeStep = parseFloat(e.target.value);
+      applyTimeStep(currentTimeStep);
     });
 
-    // Playback loop
+    // Playback loop toggle button
     const btnPlay = document.getElementById("btnPlay");
     btnPlay.addEventListener("click", () => {
       if (!isSimulationStarted) {
         startSimulation();
+        return;
       }
-      isPlaying = !isPlaying;
       if (isPlaying) {
-        btnPlay.innerText = "⏸";
-        btnPlay.classList.replace("bg-blue-600", "bg-amber-600");
-        playInterval = setInterval(() => {
-          let nextTime = currentTimeStep + 3;
-          if (nextTime > 24) nextTime = -18;
-          currentTimeStep = nextTime;
-          timeSlider.value = currentTimeStep;
-          timeSlider.dispatchEvent(new Event("input"));
-        }, 1200);
+        stopPlayback();
       } else {
-        btnPlay.innerText = "▶";
-        btnPlay.classList.replace("bg-amber-600", "bg-blue-600");
-        if (playInterval) clearInterval(playInterval);
+        if (currentTimeStep >= 24.0) {
+          currentTimeStep = 0; // restart from beginning if already at landfall
+          applyTimeStep(0);
+        }
+        startPlayback();
       }
     });
 
