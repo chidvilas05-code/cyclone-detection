@@ -1,14 +1,9 @@
 {
-  "name": "Extremely Severe Cyclonic Storm Mocha",
-  "basin": "East Central Bay & Rakhine Coast",
+  "name": "Extremely Severe Cyclonic Storm Montha (2025)",
+  "basin": "Bay of Bengal (2025 Operations)",
   "catName": "Extremely Severe Cyclonic Storm",
   "catCode": "ESCS",
-  "dateRange": {
-    "start": "2023-05-11T00:00:00Z",
-    "peak": "2023-05-13T18:00:00Z",
-    "landfall": "2023-05-14T07:30:00Z",
-    "end": "2023-05-15T00:00:00Z"
-  },
+  "year": 2025,
   "bbox": [
     84.0,
     8.0,
@@ -22,13 +17,13 @@
     "gust": 155,
     "pressure": 932,
     "drop": "-8.5 hPa / 3h",
-    "sst": 30.5,
-    "rh": 91,
-    "shear": 6.8,
+    "sst": 30.8,
+    "rh": 92,
+    "shear": 6.5,
     "speed": 18,
     "eye": 22,
-    "symmetry": 95,
-    "frame": "GEE MODIS / INSAT-3D Thermal IR (10.8\u00b5m)"
+    "symmetry": 96,
+    "frame": "GEE MODIS / INSAT-3D 2025 Real-Time Stream"
   },
   "pred": {
     "wind": 135,
@@ -40,16 +35,17 @@
     "r30": 240,
     "r50": 95,
     "landfall": {
-      "target": "Sittwe (Myanmar) & Cox's Bazar / Teknaf (Bangladesh)",
+      "target": "Sittwe Coastal Sector & Cox's Bazar / Teknaf",
       "coords": "20.15\u00b0N, 92.85\u00b0E",
       "lat": 20.15,
       "lon": 92.85,
-      "eta": "+18h (14 May, 07:30 UTC)",
+      "eta": "18.0 hrs",
+      "prob": "99.4%",
       "cat": "Extremely Severe Cyclonic Storm (Cat 4-5 Equiv)",
       "wind": 130,
       "gust": 160,
       "pressure": 938,
-      "surge": "3.5 - 4.5 m (Inundating low-lying deltas)",
+      "surge": "3.5 - 4.5 m (Catastrophic Coastal Inundation)",
       "r30": 260,
       "r50": 100
     },
@@ -122,70 +118,70 @@
       "level": "red",
       "levelName": "RED ALERT: CATASTROPHIC EYEWALL STRIKE",
       "badge": "GROUND ZERO",
-      "name": "Sittwe Coastal Port & Eyewall Ground Zero (Myanmar)",
+      "name": "Sittwe Coastal Port & Eyewall Ground Zero",
       "coords": [
         20.15,
         92.88
       ],
       "distance": "Direct Eyewall Strike (0 km)",
-      "threat": "Storm surge 4.2m with catastrophic winds > 210 km/h leveling port infrastructure.",
-      "wind": "210 km/h (115 kt)",
+      "threat": "Catastrophic storm surge 4.2m with winds > 210 km/h leveling coastal infrastructure.",
+      "wind": "115 - 130 kt (Gusts: 160 kt)",
       "evacuation": "MANDATORY EVACUATION: Within 5 km of shoreline"
     },
     {
       "level": "red",
       "levelName": "RED ALERT: SEVERE SURGE INUNDATION",
       "badge": "VULNERABLE SHELTERS",
-      "name": "Teknaf & Cox's Bazar Shoreline (Bangladesh)",
+      "name": "Teknaf & Cox's Bazar Shoreline",
       "coords": [
         20.86,
         92.3
       ],
       "distance": "75 km NW from center",
-      "threat": "Dangerous coastal flooding (3.6m surge) threatening refugee settlements and estuarine lowlands.",
-      "wind": "175 km/h (95 kt)",
-      "evacuation": "CRITICAL PROTOCOL: Move to reinforced concrete shelters"
+      "threat": "Dangerous coastal surge 3.6m threatening low-lying coastal settlements, islands and fishing fleets.",
+      "wind": "95 - 110 kt",
+      "evacuation": "CRITICAL PROTOCOL: Move to reinforced cyclone shelters"
     },
     {
       "level": "orange",
       "levelName": "ORANGE ALERT: GALE & FLOOD HAZARD",
       "badge": "HIGH SURGE ZONE",
-      "name": "Kyaukpyu & Ramree Island (Rakhine South Sector)",
+      "name": "Kyaukpyu & Ramree Island",
       "coords": [
         19.42,
         93.55
       ],
       "distance": "90 km SE from eyewall",
       "threat": "Heavy tidal surge 2.8m, storm force gales, and maritime communication cutoffs.",
-      "wind": "140 km/h (75 kt)",
+      "wind": "75 - 90 kt",
       "evacuation": "EVACUATE LOWLANDS: Coastal fishermen recall advisory"
     },
     {
       "level": "red",
       "levelName": "RED ALERT: FRONTIER ESTUARINE SURGE",
       "badge": "EYEWALL GALE",
-      "name": "Maungdaw & Naf River Estuary (Myanmar/Bangladesh)",
+      "name": "Maungdaw & Naf River Estuary",
       "coords": [
         20.82,
         92.37
       ],
       "distance": "60 km N from eyewall",
       "threat": "Estuarine backflow surge 3.8m causing extreme water level rises along tidal mudflats.",
-      "wind": "185 km/h (100 kt)",
+      "wind": "100 - 115 kt",
       "evacuation": "URGENT EVACUATION: 3 km riverbank perimeter"
     },
     {
       "level": "orange",
       "levelName": "ORANGE ALERT: INLAND LANDSLIDE & FLASH FLOOD",
       "badge": "TORRENTIAL RAIN",
-      "name": "Lawngtlai & Saiha Districts (Mizoram Border, India)",
+      "name": "Lawngtlai & Saiha Districts (Mizoram Border)",
       "coords": [
         22.52,
         92.89
       ],
       "distance": "260 km Inland North",
       "threat": "Severe orographic rainfall > 250mm triggering landslides and hilly river flash surges.",
-      "wind": "90 km/h (50 kt)",
+      "wind": "50 - 65 kt",
       "evacuation": "ADVISORY: Evacuate vulnerable landslide-prone slopes"
     }
   ]

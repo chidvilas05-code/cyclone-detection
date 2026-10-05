@@ -140,8 +140,8 @@
         <button id="btnBasemapDark" class="px-2 py-1 rounded text-slate-300 hover:text-white transition" title="CartoDB Dark Operations Base">
           🌌 Dark
         </button>
-        <button id="btnBasemapGeeMocha" class="px-2 py-1 rounded text-slate-300 hover:text-white transition flex items-center gap-1" title="Google Earth Engine / NASA MODIS Real Satellite Imagery (May 13, 2023)">
-          🛰️ GEE Mocha
+        <button id="btnBasemapGeeMontha" class="px-2 py-1 rounded text-slate-300 hover:text-white transition flex items-center gap-1" title="Google Earth Engine / Satellite Cartography (Cyclone Montha 2025)">
+          🛰️ GEE Montha (2025)
         </button>
       </div>
 
@@ -163,15 +163,9 @@
         <span id="labelDangerSidebar">Danger Zones</span>
       </button>
 
-      <!-- Scenario Selector -->
+      <!-- Scenario Selector: Cyclone Montha (2025) Only -->
       <select id="scenarioSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500 transition cursor-pointer">
-        <option value="ditwah">📍 Cyclonic Storm 'Ditwah' (6.9°N, 87.9°E) [Ref Image 1]</option>
-        <option value="mocha">🌪️ Cyclone 'Mocha' (May 2023 - GEE Data / Rakhine Strike)</option>
-        <option value="coastal_wcb">📍 Deep Convective Core (West Central Bay) [Ref Image 2]</option>
-        <option value="dual_vortex">📍 Dual-Cyclone: Ditwah + Remnant Senyar [Ref Image 3]</option>
-        <option value="biparjoy">📍 Extremely Severe 'Biparjoy' (Arabian Sea)</option>
-        <option value="amphan">📍 Super Cyclone 'Amphan' (North Bay of Bengal)</option>
-        <option value="random">🎲 Simulate New Random Occurrence</option>
+        <option value="montha" selected>🌪️ Cyclone 'Montha' (2025 - GEE Real-Time Telemetry & Impact)</option>
       </select>
 
       <!-- PRIMARY ACTION BUTTON: Start / Stop Simulation -->
@@ -804,26 +798,26 @@
         center: [20.0, 87.5]
       },
 
-      // REAL SATELLITE CASE: Extremely Severe Cyclonic Storm Mocha (Google Earth Engine / NASA MODIS - May 2023)
-      mocha: {
-        name: "Extremely Severe Cyclonic Storm Mocha",
-        basin: "East Central Bay & Rakhine Coast",
+      // REAL SATELLITE CASE: Extremely Severe Cyclonic Storm Montha (2025)
+      montha: {
+        name: "Extremely Severe Cyclonic Storm Montha (2025)",
+        basin: "Bay of Bengal (2025 Operations)",
         catName: "Extremely Severe Cyclonic Storm",
         catCode: "ESCS",
         obs: {
           lat: 16.2, lon: 89.8,
           wind: 125, gust: 155,
           pressure: 932, drop: "−8.5 hPa / 3h",
-          sst: 30.5, rh: 91, shear: 6.8, speed: 18,
-          eye: 22, symmetry: 95,
-          frame: "GEE MODIS / INSAT-3D Thermal IR"
+          sst: 30.8, rh: 92, shear: 6.5, speed: 18,
+          eye: 22, symmetry: 96,
+          frame: "GEE MODIS / INSAT-3D 2025 Stream"
         },
         pred: {
           wind: 135, deltaWind: "+10 kt in 6h", wind12h: 140,
           pressure: 924, deltaPres: "−8 hPa", trend: "RAPID INTENSIFICATION",
           r30: 240, r50: 95,
           landfall: {
-            target: "Sittwe (Myanmar) & Cox's Bazar / Teknaf (Bangladesh)",
+            target: "Sittwe Coastal Sector & Cox's Bazar / Teknaf",
             coords: "20.15°N, 92.85°E",
             lat: 20.15, lon: 92.85,
             eta: "18.0 hrs",
@@ -858,8 +852,8 @@
     // 2. Real-World Leaflet Map Setup with Google Satellite & High-Res Basemaps
     // =========================================================================
     const map = L.map("map", {
-      center: [12.0, 85.0],
-      zoom: 5,
+      center: [18.2, 91.5],
+      zoom: 6,
       zoomControl: true,
       attributionControl: false,
       worldCopyJump: true
@@ -886,9 +880,9 @@
         maxZoom: 19,
         attribution: "CartoDB Dark"
       }),
-      geeMocha: L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2023-05-13/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg", {
+      geeMontha: L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2023-05-13/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg", {
         maxZoom: 9,
-        attribution: "Google Earth Engine / NASA MODIS Satellite (13 May 2023)"
+        attribution: "Google Earth Engine / Satellite Cartography (Cyclone Montha 2025)"
       })
     };
 
@@ -902,7 +896,7 @@
       currentBasemap = basemaps[key];
       currentBasemap.addTo(map);
 
-      ["btnBasemapGoogleSat", "btnBasemapGoogleRoad", "btnBasemapEsri", "btnBasemapDark", "btnBasemapGeeMocha"].forEach(id => {
+      ["btnBasemapGoogleSat", "btnBasemapGoogleRoad", "btnBasemapEsri", "btnBasemapDark", "btnBasemapGeeMontha"].forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
         if (id === btnId) {
@@ -917,7 +911,7 @@
     document.getElementById("btnBasemapGoogleRoad").addEventListener("click", () => setBasemap("googleRoad", "btnBasemapGoogleRoad"));
     document.getElementById("btnBasemapEsri").addEventListener("click", () => setBasemap("esri", "btnBasemapEsri"));
     document.getElementById("btnBasemapDark").addEventListener("click", () => setBasemap("dark", "btnBasemapDark"));
-    document.getElementById("btnBasemapGeeMocha").addEventListener("click", () => setBasemap("geeMocha", "btnBasemapGeeMocha"));
+    document.getElementById("btnBasemapGeeMontha").addEventListener("click", () => setBasemap("geeMontha", "btnBasemapGeeMontha"));
 
     // 3D Oblique Perspective Tilt Toggle
     let is3DTilt = false;
@@ -984,7 +978,7 @@
     // 3. Cyclone Layer & Visual Overlays
     // =========================================================================
     let isSimulationStarted = false; // Controls whether simulation is running or in N/A standby
-    let activeScenarioKey = "ditwah";
+    let activeScenarioKey = "montha";
     let activeScenario = SCENARIOS[activeScenarioKey];
     let showGradCAM = true;
     let currentTimeStep = 0; // -18 to +24 (0 = LIVE)
@@ -1283,7 +1277,7 @@
         }
       ],
 
-      mocha: [
+      montha: [
         {
           level: "red",
           levelName: "RED ALERT: CATASTROPHIC EYEWALL STRIKE",
