@@ -234,6 +234,11 @@
             <span>Forecast Cone of Uncertainty</span>
           </label>
 
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+            <input type="checkbox" id="chkDangerZones" checked class="rounded border-slate-700 bg-slate-800 text-red-500">
+            <span>Danger Prone Coastal Areas & Pins</span>
+          </label>
+
           <div class="h-px bg-slate-800 my-0.5"></div>
 
           <!-- Trajectory Legend -->
@@ -250,6 +255,10 @@
           <div class="flex items-center gap-2">
             <span class="text-xs">🚩</span>
             <span class="text-red-400 font-mono text-[10px]">Coastal Landfall Impact Target</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-red-600 border border-red-300 animate-pulse flex items-center justify-center text-[8px] text-white font-bold">!</span>
+            <span class="text-red-300 font-mono text-[10px]">Danger Prone Impact Zones (Map Pins)</span>
           </div>
         </div>
       </div>
@@ -486,8 +495,35 @@
           </div>
         </div>
 
+        <!-- ================================================================ -->
+        <!-- DANGER PRONE AREAS & VULNERABILITY ZONES (NEW)                   -->
+        <!-- ================================================================ -->
+        <div class="bg-gradient-to-br from-red-950/40 via-slate-900 to-slate-950 border border-red-500/50 rounded-xl p-3 mb-3 shadow-xl">
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
+              <span class="text-[10px] uppercase font-black tracking-wider text-red-400">Danger Prone Impact Areas</span>
+            </div>
+            <span id="dangerZoneSummaryBadge" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/40">
+              STANDBY
+            </span>
+          </div>
+
+          <div class="text-[10px] text-slate-400 mb-2 flex items-center justify-between">
+            <span>Vulnerable coastal & inland districts:</span>
+            <span class="text-[9px] text-cyan-400 font-mono font-semibold">CLICK TO FLY ON MAP</span>
+          </div>
+
+          <!-- Dynamic List of Danger Prone Areas -->
+          <div id="dangerZonesList" class="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
+            <div class="p-3 text-center text-slate-500 font-mono text-xs italic bg-slate-950/60 rounded-lg border border-slate-800">
+              Awaiting simulation start... Click 'Start Simulation' above
+            </div>
+          </div>
+        </div>
+
         <!-- Landfall Coastal Advisory & Impact Note -->
-        <div class="bg-gradient-to-r from-red-950/30 to-slate-900 border border-red-900/40 rounded-xl p-3 flex-1 flex flex-col justify-between">
+        <div class="bg-gradient-to-r from-red-950/30 to-slate-900 border border-red-900/40 rounded-xl p-3 flex flex-col justify-between">
           <div>
             <div class="flex items-center gap-1.5 text-red-400 text-xs font-bold mb-1">
               <span>⚠️</span>
@@ -866,8 +902,528 @@
     // Layer groups for map elements
     const trajectoryLayer = L.layerGroup().addTo(map);
     const dangerRadiiLayer = L.layerGroup().addTo(map);
+    const dangerProneAreasLayer = L.layerGroup().addTo(map);
     const quadrantsLayer = L.layerGroup().addTo(map);
     const targetMarkersLayer = L.layerGroup().addTo(map);
+
+    // =========================================================================
+    // DANGER PRONE AREAS & VULNERABILITY ZONES DATA REGISTRY
+    // =========================================================================
+    const DANGER_ZONES_REGISTRY = {
+      ditwah: [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC IMPACT",
+          badge: "CORE EYEWALL CONTACT",
+          name: "Ennore & Thiruvallur Coastal Strip",
+          coords: [13.25, 80.32],
+          threat: "Direct eyewall passage, 2.8 - 3.4 m storm surge inundation, catastrophic structural damage",
+          wind: "70 - 85 kt",
+          evacuation: "Mandatory coastal evacuation (0 - 5 km zone)"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: SURGE INUNDATION",
+          badge: "SURGE INGRESS",
+          name: "Pulicat Lagoon & SPSR Nellore Coast",
+          coords: [13.55, 80.20],
+          threat: "Sea ingress up to 4 km inland, barrier breach, extensive fishery infrastructure loss",
+          wind: "65 - 80 kt",
+          evacuation: "Coastal villages relocated to cyclone shelters"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "GALE & FLASH FLOOD",
+          name: "Greater Chennai Urban Metro (Royapuram - Marina)",
+          coords: [13.08, 80.28],
+          threat: "Torrential rainfall >200mm, severe urban flooding, power grid collapse, uprooted trees",
+          wind: "50 - 68 kt",
+          evacuation: "Shelter in place / Low-lying ward evacuation"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "WIND DAMAGE",
+          name: "Kanchipuram & Chengalpattu Industrial Belt",
+          coords: [12.83, 79.70],
+          threat: "High destructive gusts, factory roof blow-off, National Highway 16 inundation",
+          wind: "45 - 60 kt",
+          evacuation: "Emergency relief centers activated"
+        },
+        {
+          level: "yellow",
+          levelName: "YELLOW ALERT: MODERATE ADVISORY",
+          badge: "SQUALL & STREAM FLOOD",
+          name: "Tirupati Foothills & Chittoor Lowlands",
+          coords: [13.62, 79.42],
+          threat: "Flash floods in seasonal streams, squall gusts, localized landslips",
+          wind: "35 - 45 kt",
+          evacuation: "Riverbank monitoring & travel advisory"
+        }
+      ],
+      coastal_wcb: [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC IMPACT",
+          badge: "CORE EYEWALL CONTACT",
+          name: "Machilipatnam Port & Krishna Mangrove Shore",
+          coords: [16.18, 81.14],
+          threat: "Direct eyewall strike, 3.2 - 4.0 m storm surge inundation, complete coastal strip cutoff",
+          wind: "75 - 95 kt",
+          evacuation: "Mandatory coastal evacuation (Red Alert)"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: SURGE INUNDATION",
+          badge: "DYKE BREACH",
+          name: "Nizampatnam & Bapatla Coastal Belt",
+          coords: [15.90, 80.67],
+          threat: "Tidal flooding across hatcheries, sea embankment breach, destructive storm surge",
+          wind: "70 - 90 kt",
+          evacuation: "Emergency evacuation to cyclone shelters"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "RIVER FLOOD & GALE",
+          name: "Vijayawada Metro & Guntur Urban Area",
+          coords: [16.51, 80.64],
+          threat: "Torrential rain >250mm, Krishna river swelling, waterlogging across commercial hubs",
+          wind: "55 - 70 kt",
+          evacuation: "Shelter in place / Flood gates opened"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "COASTAL INGRESS",
+          name: "Diviseema Cyclone Impact Zone",
+          coords: [16.02, 80.95],
+          threat: "High sea wave ingress, coastal road washouts, electricity blackout",
+          wind: "65 - 80 kt",
+          evacuation: "Immediate relocation of fishing hamlets"
+        },
+        {
+          level: "yellow",
+          levelName: "YELLOW ALERT: MODERATE ADVISORY",
+          badge: "PADDY INUNDATION",
+          name: "West Godavari Lowlands & Eluru",
+          coords: [16.71, 81.10],
+          threat: "Heavy rainbands, paddy field submergence, canal overflow",
+          wind: "40 - 52 kt",
+          evacuation: "Agricultural flood watch"
+        }
+      ],
+      dual_vortex: [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC IMPACT",
+          badge: "CORE EYEWALL CONTACT",
+          name: "Jaffna Peninsula & Point Pedro Shore",
+          coords: [9.82, 80.23],
+          threat: "Direct vortex contact, 1.8 - 2.5 m surge, high-density coastal village damage",
+          wind: "60 - 78 kt",
+          evacuation: "Coastal strip evacuated"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: BRIDGE CORRIDOR",
+          badge: "SEA SWELL BREACH",
+          name: "Rameswaram & Dhanushkodi Strip",
+          coords: [9.28, 79.31],
+          threat: "Pamban bridge gale winds, extreme sea roughness, sandspit breach",
+          wind: "58 - 75 kt",
+          evacuation: "Pamban bridge transit suspended"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "LAGOON SWELLING",
+          name: "Mannar Coast & Kilinochchi Lowlands",
+          coords: [9.05, 79.90],
+          threat: "Squally gale winds, lagoon swelling, mud hut destruction",
+          wind: "45 - 60 kt",
+          evacuation: "Relief camps operational"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "SQUALL WINDS",
+          name: "Ramanathapuram Shore Taluks",
+          coords: [9.36, 78.83],
+          threat: "Heavy rainbands, localized flooding, power grid trips",
+          wind: "42 - 55 kt",
+          evacuation: "Emergency advisory issued"
+        },
+        {
+          level: "yellow",
+          levelName: "YELLOW ALERT: MODERATE ADVISORY",
+          badge: "PORT WARNING",
+          name: "Tuticorin Coast & Gulf of Mannar",
+          coords: [8.76, 78.13],
+          threat: "High surf warning, fishing suspended, outer feeder squalls",
+          wind: "35 - 45 kt",
+          evacuation: "Port warning signal hoisted"
+        }
+      ],
+      biparjoy: [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC IMPACT",
+          badge: "CORE EYEWALL CONTACT",
+          name: "Jakhau Port & Abdasa Coastline",
+          coords: [23.24, 68.61],
+          threat: "Eyewall landfall, 3.5 - 4.2 m storm surge, total port infrastructure shutdown",
+          wind: "85 - 105 kt",
+          evacuation: "Mandatory zero-casualty evacuation (10 km zone)"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: SURGE INUNDATION",
+          badge: "EXTREME SURGE",
+          name: "Mandvi Coastal Strip & Gulf of Kutch",
+          coords: [22.83, 69.35],
+          threat: "Extreme wave action, beach erosion, power transmission tower collapse",
+          wind: "80 - 100 kt",
+          evacuation: "Complete relocation of coastal population"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: HIGH HAZARD",
+          badge: "TEMPLE HEADLAND",
+          name: "Dwarka & Okha Coastal Headland",
+          coords: [22.24, 68.96],
+          threat: "Massive sea swells, temple town gale gusts, jetty destruction",
+          wind: "75 - 95 kt",
+          evacuation: "Pilgrim ban & high hazard curfew"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "PORT TERMINAL",
+          name: "Kandla Port & Gandhidham Urban Belt",
+          coords: [23.07, 70.13],
+          threat: "Cargo berths suspended, salt pan inundation, industrial roof damage",
+          wind: "60 - 75 kt",
+          evacuation: "Emergency control room active"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "REFINERY ZONE",
+          name: "Jamnagar Coastal Refinery Belt",
+          coords: [22.47, 70.06],
+          threat: "Squall-force winds, oil terminal precautionary shutdown",
+          wind: "55 - 70 kt",
+          evacuation: "Industrial high alert"
+        },
+        {
+          level: "yellow",
+          levelName: "YELLOW ALERT: MODERATE ADVISORY",
+          badge: "RIVER SWELLING",
+          name: "Morbi & Rajkot North Plains",
+          coords: [22.82, 70.83],
+          threat: "High convective rainbands, river swelling, tree falls",
+          wind: "40 - 55 kt",
+          evacuation: "Localized flood warning"
+        }
+      ],
+      amphan: [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC IMPACT",
+          badge: "SUPER CYCLONE CORE",
+          name: "Sagar Island & Kakdwip Delta",
+          coords: [21.80, 88.10],
+          threat: "Core eyewall direct impact, 4.8 - 5.8 m catastrophic storm surge inundation",
+          wind: "134 - 165 kt",
+          evacuation: "Evacuation of 500,000+ people to pucca shelters"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: DELTA SURGE",
+          badge: "EMBANKMENT BREACH",
+          name: "Sundarbans Core Mangrove Settlements",
+          coords: [21.95, 88.85],
+          threat: "Earthen embankment washouts, saline inundation, total destruction of mud structures",
+          wind: "125 - 155 kt",
+          evacuation: "Critical red alert; riverine rescue deployed"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: RESORT SEAWALL",
+          badge: "MASSIVE STORM TIDE",
+          name: "Digha & East Medinipur Beach Front",
+          coords: [21.63, 87.52],
+          threat: "Massive storm tide, hotel zone sea surge, tree and telecom uprooting",
+          wind: "120 - 150 kt",
+          evacuation: "Total beach lockdown and seawall evacuation"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "METRO GRID COLLAPSE",
+          name: "Kolkata Metropolitan & Howrah",
+          coords: [22.57, 88.36],
+          threat: "Severe squalls up to 130 km/h, citywide power grid collapse, airport shutdown, road blockages",
+          wind: "70 - 90 kt",
+          evacuation: "Strict curfew & emergency municipal deployment"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "INLAND WATERLOGGING",
+          name: "North 24 Parganas Lowlands",
+          coords: [22.65, 88.65],
+          threat: "Massive inland river waterlogging, crop submergence, brick kiln destruction",
+          wind: "65 - 85 kt",
+          evacuation: "Relief distribution centers active"
+        },
+        {
+          level: "yellow",
+          levelName: "YELLOW ALERT: MODERATE ADVISORY",
+          badge: "ROUGH SEAS",
+          name: "Balasore Coast & Bhadrak (Odisha)",
+          coords: [21.49, 86.93],
+          threat: "Rough seas, gale winds, localized flash floods",
+          wind: "50 - 65 kt",
+          evacuation: "Odisha Disaster Rapid Action deployed"
+        }
+      ]
+    };
+
+    let dangerZoneMarkersMap = {};
+
+    function getDangerZonesForScenario(scenarioKey, scenario) {
+      if (DANGER_ZONES_REGISTRY[scenarioKey]) {
+        return DANGER_ZONES_REGISTRY[scenarioKey];
+      }
+      if (scenario && scenario.dangerZones) {
+        return scenario.dangerZones;
+      }
+      const lf = (scenario && scenario.pred && scenario.pred.landfall) ? scenario.pred.landfall : { lat: 13.2, lon: 80.3, target: "Coastal Impact Zone" };
+      const lat = lf.lat || 13.2;
+      const lon = lf.lon || 80.3;
+      const target = lf.target || "Coastal Zone";
+      const w = lf.wind || 70;
+
+      return [
+        {
+          level: "red",
+          levelName: "RED ALERT: CATASTROPHIC IMPACT",
+          badge: "CORE EYEWALL CONTACT",
+          name: `${target} - Core Eyewall Strike`,
+          coords: [lat, lon],
+          threat: `Severe eyewall strike, storm surge inundation (${lf.surge || "2.8 - 3.5 m"}), structural destruction`,
+          wind: `${w} kt (Gusts: ${Math.round(w * 1.3)} kt)`,
+          evacuation: "Mandatory coastal evacuation (0 - 5 km zone)"
+        },
+        {
+          level: "red",
+          levelName: "RED ALERT: SURGE INUNDATION",
+          badge: "COASTAL INGRESS",
+          name: `${target} - Creek & Estuary Head`,
+          coords: [Number((lat + 0.22).toFixed(2)), Number((lon - 0.12).toFixed(2))],
+          threat: "Tidal river backflow, sea water ingress up to 3.5 km, aquaculture loss",
+          wind: `${Math.round(w * 0.92)} kt`,
+          evacuation: "Relocation to elevated storm shelters"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "GALE & FLASH FLOOD",
+          name: `${target} - Adjacent Urban District`,
+          coords: [Number((lat - 0.32).toFixed(2)), Number((lon - 0.28).toFixed(2))],
+          threat: "Torrential downpours >180mm, power distribution trips, road washouts",
+          wind: `${Math.round(w * 0.78)} kt`,
+          evacuation: "Shelter in place / Flood gates opened"
+        },
+        {
+          level: "orange",
+          levelName: "ORANGE ALERT: HIGH SEVERITY",
+          badge: "HARBOUR DAMAGE",
+          name: `${target} - Port & Maritime Anchorage`,
+          coords: [Number((lat + 0.18).toFixed(2)), Number((lon + 0.15).toFixed(2))],
+          threat: "Extreme rough seas, vessel drift, breakwater overtopping",
+          wind: `${Math.round(w * 0.85)} kt`,
+          evacuation: "Total suspension of port operations"
+        },
+        {
+          level: "yellow",
+          levelName: "YELLOW ALERT: MODERATE ADVISORY",
+          badge: "FEEDER RAINBANDS",
+          name: `${target} - Outer Hinterland Basin`,
+          coords: [Number((lat - 0.55).toFixed(2)), Number((lon - 0.45).toFixed(2))],
+          threat: "Squall-line rainfall, localized waterlogging in low-lying farmland",
+          wind: `${Math.round(w * 0.60)} kt`,
+          evacuation: "Riverbank surveillance & travel advisory"
+        }
+      ];
+    }
+
+    function renderDangerProneAreas() {
+      dangerProneAreasLayer.clearLayers();
+      dangerZoneMarkersMap = {};
+
+      if (!isSimulationStarted) {
+        if (document.getElementById("dangerZoneSummaryBadge")) {
+          document.getElementById("dangerZoneSummaryBadge").innerText = "STANDBY";
+        }
+        if (document.getElementById("dangerZonesList")) {
+          document.getElementById("dangerZonesList").innerHTML = `
+            <div class="p-3 text-center text-slate-500 font-mono text-xs italic bg-slate-950/60 rounded-lg border border-slate-800">
+              Awaiting simulation start... Click 'Start Simulation' above
+            </div>
+          `;
+        }
+        return;
+      }
+
+      const zones = getDangerZonesForScenario(activeScenarioKey, activeScenario);
+      const lf = (activeScenario && activeScenario.pred && activeScenario.pred.landfall) ? activeScenario.pred.landfall : {};
+      const lfLat = lf.lat || (zones[0] ? zones[0].coords[0] : 13.2);
+      const lfLon = lf.lon || (zones[0] ? zones[0].coords[1] : 80.3);
+
+      const isLayerVisible = !document.getElementById("chkDangerZones") || document.getElementById("chkDangerZones").checked;
+
+      if (isLayerVisible) {
+        // Red core surge hazard buffer (R50)
+        const surgeRadiusMeters = (lf.r50 || 70) * 1000;
+        const surgeCircle = L.circle([lfLat, lfLon], {
+          radius: surgeRadiusMeters,
+          color: "#ef4444",
+          weight: 2,
+          dashArray: "6, 4",
+          fillColor: "#ef4444",
+          fillOpacity: 0.20
+        });
+        surgeCircle.bindTooltip(`<b>🔴 CRITICAL SURGE & EYEWALL IMPACT ZONE (R50: ${lf.r50 || 70} km)</b><br>Expected Surge: ${lf.surge || "2.8 - 3.4 m"}`, { sticky: true });
+        dangerProneAreasLayer.addLayer(surgeCircle);
+
+        // Orange gale hazard buffer (R30)
+        const galeRadiusMeters = (lf.r30 || 205) * 1000;
+        const galeCircle = L.circle([lfLat, lfLon], {
+          radius: galeRadiusMeters,
+          color: "#f97316",
+          weight: 1.5,
+          dashArray: "4, 4",
+          fillColor: "#f97316",
+          fillOpacity: 0.08
+        });
+        galeCircle.bindTooltip(`<b>🟠 GALE WIND DAMAGE & FLOOD ZONE (R30: ${lf.r30 || 205} km)</b>`, { sticky: true });
+        dangerProneAreasLayer.addLayer(galeCircle);
+
+        // Render interactive danger pins on map
+        zones.forEach((z) => {
+          const isRed = z.level === "red";
+          const isOrange = z.level === "orange";
+          const pinBg = isRed ? "bg-red-600" : (isOrange ? "bg-orange-600" : "bg-yellow-600");
+          const pinBorder = isRed ? "border-red-400" : (isOrange ? "border-orange-400" : "border-yellow-400");
+          const pinText = isRed ? "text-red-300" : (isOrange ? "text-orange-300" : "text-yellow-300");
+          const pingBg = isRed ? "bg-red-500" : (isOrange ? "bg-orange-500" : "bg-yellow-500");
+
+          const dangerIcon = L.divIcon({
+            className: "custom-danger-marker",
+            html: `
+              <div class="relative -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
+                <div class="relative flex items-center justify-center">
+                  <div class="absolute -inset-1.5 rounded-full ${pingBg} opacity-75 animate-ping"></div>
+                  <div class="w-6 h-6 rounded-full border-2 ${pinBorder} ${pinBg} flex items-center justify-center shadow-lg shadow-black/80 text-[11px] font-black text-white">
+                    ⚠️
+                  </div>
+                </div>
+                <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-950/90 border ${pinBorder} ${pinText} font-mono text-[9px] font-bold shadow-md whitespace-nowrap pointer-events-none">
+                  ${z.name.split("(")[0].split("-")[0].trim()}
+                </div>
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          const marker = L.marker(z.coords, { icon: dangerIcon });
+          marker.bindPopup(`
+            <div class="p-2 min-w-[220px] max-w-[280px] text-slate-100 font-sans">
+              <div class="flex items-center gap-1.5 pb-1 border-b ${isRed ? 'border-red-500/40 text-red-400' : 'border-orange-500/40 text-orange-400'}">
+                <span class="w-2 h-2 rounded-full ${pinBg} animate-ping"></span>
+                <span class="text-xs font-black uppercase tracking-wider">${z.levelName}</span>
+              </div>
+              <div class="text-sm font-bold text-white mt-1.5 leading-snug">${z.name}</div>
+              <div class="text-[10px] font-mono text-slate-400 mt-0.5">Location: ${z.coords[0].toFixed(2)}°N, ${z.coords[1].toFixed(2)}°E</div>
+              <div class="text-[11px] text-slate-200 mt-1.5 leading-tight"><b>Threat:</b> ${z.threat}</div>
+              <div class="text-[11px] text-amber-300 mt-1 font-mono"><b>Peak Winds:</b> ${z.wind}</div>
+              <div class="text-[10px] font-bold ${isRed ? 'text-red-300 bg-red-950/80 border-red-500/40' : 'text-orange-300 bg-orange-950/80 border-orange-500/40'} font-mono mt-2 p-1.5 rounded border">
+                🚨 ${z.evacuation}
+              </div>
+            </div>
+          `);
+          dangerProneAreasLayer.addLayer(marker);
+          dangerZoneMarkersMap[z.name] = marker;
+        });
+      }
+
+      // Render Left Sidebar Danger Prone List
+      let redCount = 0;
+      let orangeCount = 0;
+      let yellowCount = 0;
+      zones.forEach(z => {
+        if (z.level === "red") redCount++;
+        else if (z.level === "orange") orangeCount++;
+        else yellowCount++;
+      });
+
+      if (document.getElementById("dangerZoneSummaryBadge")) {
+        document.getElementById("dangerZoneSummaryBadge").innerHTML = `
+          <span class="text-red-400 font-bold">${redCount} Red</span> · 
+          <span class="text-orange-400 font-bold">${orangeCount} Orange</span> · 
+          <span class="text-yellow-400 font-bold">${yellowCount} Yellow</span>
+        `;
+      }
+
+      const container = document.getElementById("dangerZonesList");
+      if (container) {
+        container.innerHTML = "";
+        zones.forEach(z => {
+          const isRed = z.level === "red";
+          const isOrange = z.level === "orange";
+          const cardBorder = isRed ? "border-red-500/50 hover:border-red-400" : (isOrange ? "border-orange-500/50 hover:border-orange-400" : "border-yellow-500/50 hover:border-yellow-400");
+          const cardBg = isRed ? "bg-red-950/20 hover:bg-red-950/30" : (isOrange ? "bg-orange-950/20 hover:bg-orange-950/30" : "bg-yellow-950/20 hover:bg-yellow-950/30");
+          const badgeBg = isRed ? "bg-red-950 text-red-300 border-red-500/40" : (isOrange ? "bg-orange-950 text-orange-300 border-orange-500/40" : "bg-yellow-950 text-yellow-300 border-yellow-500/40");
+          const dotColor = isRed ? "bg-red-500" : (isOrange ? "bg-orange-500" : "bg-yellow-500");
+          const badgeText = isRed ? "RED ALERT" : (isOrange ? "ORANGE ALERT" : "YELLOW ALERT");
+
+          const item = document.createElement("div");
+          item.className = `p-2.5 rounded-lg border transition cursor-pointer hover:scale-[1.01] ${cardBg} ${cardBorder} shadow-sm group`;
+          item.onclick = () => flyToDangerZone(z.coords[0], z.coords[1], z.name);
+          item.innerHTML = `
+            <div class="flex items-center justify-between gap-1">
+              <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                <span class="w-2 h-2 rounded-full ${dotColor} shrink-0"></span>
+                <span class="text-xs font-bold text-slate-100 group-hover:text-cyan-300 transition truncate">${z.name}</span>
+              </div>
+              <span class="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${badgeBg} shrink-0">${badgeText}</span>
+            </div>
+            <div class="mt-1 text-[10px] text-slate-300 leading-tight">
+              ${z.threat}
+            </div>
+            <div class="mt-1.5 flex items-center justify-between text-[9px] font-mono text-slate-400 pt-1 border-t border-slate-800/70">
+              <span class="text-amber-400 font-semibold">Wind: ${z.wind}</span>
+              <span class="${isRed ? 'text-red-400 font-bold' : 'text-orange-400'}">🚨 ${z.evacuation.split('(')[0].trim()}</span>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+      }
+    }
+
+    function flyToDangerZone(lat, lon, zoneName) {
+      map.flyTo([lat, lon], 9, { duration: 1.0 });
+      setTimeout(() => {
+        if (dangerZoneMarkersMap[zoneName]) {
+          dangerZoneMarkersMap[zoneName].openPopup();
+        }
+      }, 1050);
+    }
 
     // IMD Marine Warning Quadrants
     const IMD_QUADRANTS_DATA = [
@@ -1468,8 +2024,21 @@
       // Clear layers from map
       trajectoryLayer.clearLayers();
       dangerRadiiLayer.clearLayers();
+      dangerProneAreasLayer.clearLayers();
       targetMarkersLayer.clearLayers();
       quadrantsLayer.clearLayers();
+      dangerZoneMarkersMap = {};
+
+      if (document.getElementById("dangerZoneSummaryBadge")) {
+        document.getElementById("dangerZoneSummaryBadge").innerText = "STANDBY";
+      }
+      if (document.getElementById("dangerZonesList")) {
+        document.getElementById("dangerZonesList").innerHTML = `
+          <div class="p-3 text-center text-slate-500 font-mono text-xs italic bg-slate-950/60 rounded-lg border border-slate-800">
+            Awaiting simulation start... Click 'Start Simulation' above
+          </div>
+        `;
+      }
 
       currentTimeStep = 0;
       document.getElementById("timeSlider").value = 0;
@@ -1515,6 +2084,7 @@
       updateSidebarData();
       renderTrajectoryAndMarkers();
       renderIMDQuadrants();
+      renderDangerProneAreas();
 
       // Smoothly pan & fly map to active cyclone
       const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
@@ -1599,6 +2169,9 @@
       document.getElementById("landfallSurgeVal").innerText = landfall.surge || "2.5 - 3.5 m";
       document.getElementById("landfallR30Val").innerText = `${landfall.r30 || pred.r30} km`;
       document.getElementById("landfallR50Val").innerText = `${landfall.r50 || pred.r50} km`;
+
+      // Update Danger Prone Areas List & Map
+      renderDangerProneAreas();
 
       // Update quick push buttons styling
       document.querySelectorAll(".time-quick-btn").forEach(btn => {
@@ -1739,6 +2312,7 @@
         updateSidebarData();
         renderTrajectoryAndMarkers();
         renderIMDQuadrants();
+        renderDangerProneAreas();
         const center = activeScenario.center || [activeScenario.obs.lat, activeScenario.obs.lon];
         map.flyTo(center, activeScenario.zoom || 6, {
           duration: 1.2,
@@ -1869,6 +2443,7 @@
     document.getElementById("chkQuadrants").addEventListener("change", renderIMDQuadrants);
     document.getElementById("chkRadii").addEventListener("change", renderTrajectoryAndMarkers);
     document.getElementById("chkCone").addEventListener("change", renderTrajectoryAndMarkers);
+    document.getElementById("chkDangerZones").addEventListener("change", renderDangerProneAreas);
 
     // Initial state: STANDBY (All values N/A, button is Start Simulation)
     setStandbyState();
