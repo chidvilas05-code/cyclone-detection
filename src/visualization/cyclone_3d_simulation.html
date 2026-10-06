@@ -247,7 +247,7 @@
         </div>
 
         <!-- Track Classification Legend: Travelled (Blue) vs AI Predicted (Red) -->
-        <div id="trackLegendCard" class="bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 shadow-xl pointer-events-auto backdrop-blur flex items-center gap-3 text-[10px] font-mono">
+        <div id="trackLegendCard" class="bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 shadow-xl pointer-events-auto backdrop-blur flex items-center gap-2.5 text-[10px] font-mono">
           <div class="flex items-center gap-1.5">
             <span class="w-3.5 h-1.5 rounded-full bg-sky-400 shadow-sm shadow-sky-400/50"></span>
             <span class="text-sky-300 font-bold">Cyclone Travelled</span>
@@ -255,8 +255,9 @@
           <span class="text-slate-600">|</span>
           <div class="flex items-center gap-1.5">
             <span class="w-3.5 h-1 border-t-2 border-dashed border-red-500 shadow-sm shadow-red-500/50"></span>
-            <span class="text-red-400 font-bold">AI Model Predicted</span>
+            <span class="text-red-400 font-bold">PyTorch Model Predicted</span>
           </div>
+          <span id="trackBackendBadge" class="text-[9px] px-1 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 font-bold">AI Active</span>
         </div>
 
         <!-- Optional Second Target Card for Dual System Mode (Matching Image 3 yellow target) -->
@@ -1852,6 +1853,58 @@
     }
 
     // =========================================================================
+    // PyTorch Neural Backend Connection & Live Model Forecast Cache
+    // =========================================================================
+    let pytorchBackendOnline = false;
+    let lastQueryTime = -999;
+    let liveModelCache = null;
+
+    async function checkPyTorchBackend() {
+      try {
+        const res = await fetch("/api/status");
+        if (res.ok) {
+          const d = await res.json();
+          if (d.model_loaded) {
+            pytorchBackendOnline = true;
+            const badge = document.getElementById("trackBackendBadge");
+            if (badge) {
+              badge.innerText = `PyTorch ${d.device.toUpperCase()}`;
+              badge.className = "text-[9px] px-1 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-400 font-bold";
+            }
+          }
+        }
+      } catch (e) {
+        pytorchBackendOnline = false;
+      }
+    }
+    checkPyTorchBackend();
+    setInterval(checkPyTorchBackend, 4000);
+
+    async function fetchPyTorchModelForecast(currentCoord, currentData, tNow) {
+      if (Math.abs(tNow - lastQueryTime) < 0.25 && liveModelCache) return;
+      try {
+        const res = await fetch("/api/predict_track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lat: currentCoord.lat,
+            lon: currentCoord.lon,
+            wind: currentData.wind || 22,
+            pressure: currentData.pressure || 1004,
+            time: tNow
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          lastQueryTime = tNow;
+          liveModelCache = data;
+        }
+      } catch (e) {
+        // Offline / standalone fallback
+      }
+    }
+
+    // =========================================================================
     // AI Multi-Task Spatiotemporal Forecaster: Trajectory Prediction Engine
     // Dynamic autoregressive track prediction based on current storm intensity,
     // steering flow, beta-drift dynamics, and atmospheric baroclinic pressure head.
@@ -1861,6 +1914,17 @@
       const remainingHours = Math.max(0, landfallEta - tNow);
       if (remainingHours <= 0.05) {
         return { pathCoords: [], waypoints: [] };
+      }
+
+      // Query live PyTorch backend in the background
+      fetchPyTorchModelForecast(currentCoord, currentData, tNow);
+
+      // If PyTorch backend cache is available, use neural outputs
+      if (liveModelCache && liveModelCache.pathCoords && liveModelCache.pathCoords.length > 1) {
+        return {
+          pathCoords: liveModelCache.pathCoords,
+          waypoints: liveModelCache.waypoints || []
+        };
       }
 
       // Dynamic forward path sampled from current eye coordinates to landfall
