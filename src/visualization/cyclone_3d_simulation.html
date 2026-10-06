@@ -343,22 +343,6 @@
           </div>
         </div>
 
-        <!-- Sensor Status Badges -->
-        <div class="grid grid-cols-3 gap-1.5 mb-3 text-[10px] text-center font-mono">
-          <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
-            <span class="text-slate-400 block text-[9px]">INSAT-3D IR</span>
-            <span id="insatBadge" class="text-slate-500 font-semibold">STANDBY</span>
-          </div>
-          <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
-            <span class="text-slate-400 block text-[9px]">OCEAN BUOY</span>
-            <span id="buoyBadge" class="text-slate-500 font-semibold">STANDBY</span>
-          </div>
-          <div class="bg-slate-800/80 border border-slate-700/60 rounded p-1.5">
-            <span class="text-slate-400 block text-[9px]">DOPPLER RADAR</span>
-            <span id="radarBadge" class="text-slate-500 font-semibold">STANDBY</span>
-          </div>
-        </div>
-
         <!-- Primary Live Sensory Metrics Grid -->
         <div class="grid grid-cols-2 gap-2 mb-3">
           
@@ -2268,12 +2252,6 @@
       // Status badges
       document.getElementById("telemetryStatusChip").innerText = "STANDBY (OFFLINE)";
       document.getElementById("telemetryStatusChip").className = "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
-      document.getElementById("insatBadge").innerText = "STANDBY";
-      document.getElementById("insatBadge").className = "text-slate-500 font-semibold";
-      document.getElementById("buoyBadge").innerText = "STANDBY";
-      document.getElementById("buoyBadge").className = "text-slate-500 font-semibold";
-      document.getElementById("radarBadge").innerText = "STANDBY";
-      document.getElementById("radarBadge").className = "text-slate-500 font-semibold";
 
       // Target Card
       document.getElementById("targetStormName").innerText = "STANDBY (No Active Storm)";
@@ -2352,14 +2330,6 @@
       // Hide Standby Banner
       const banner = document.getElementById("standbyBanner");
       if (banner) banner.classList.add("hidden");
-
-      // Status badges
-      document.getElementById("insatBadge").innerText = "10.8µm LOCKED";
-      document.getElementById("insatBadge").className = "text-emerald-400 font-semibold";
-      document.getElementById("buoyBadge").innerText = "AWS SYNCED";
-      document.getElementById("buoyBadge").className = "text-emerald-400 font-semibold";
-      document.getElementById("radarBadge").innerText = "250km RANGE";
-      document.getElementById("radarBadge").className = "text-cyan-400 font-semibold";
 
       document.getElementById("targetCalloutCard").className = "bg-slate-950/90 border-2 border-red-600 rounded-lg p-2.5 shadow-2xl pointer-events-auto min-w-[240px] backdrop-blur";
 
